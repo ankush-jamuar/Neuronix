@@ -1,0 +1,211 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
+}
+
+enum Tier {
+  FREE
+  PRO
+}
+
+model User {
+  id               String    @id @default(uuid())
+  clerkId          String    @unique
+  email            String    @unique
+  name             String?
+  imageUrl         String?
+  
+  stripeCustomerId String?   @unique
+  subscriptionTier Tier      @default(FREE)
+  
+  notes            Note[]
+  documents        Document[]
+  folders          Folder[]
+  tags             Tag[]
+  chatSessions     ChatSession[]
+  chatMessages     ChatMessage[]
+  usages           Usage[]
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([clerkId])
+}
+
+model Usage {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  tokens    Int      @default(0) 
+  queries   Int      @default(0) 
+  
+  date      DateTime @default(now()) 
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Folder {
+  id          String     @id @default(uuid())
+  name        String
+  
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  parentId    String?
+  parent      Folder?    @relation("FolderToFolder", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Folder[]   @relation("FolderToFolder")
+  
+  notes       Note[]
+  documents   Document[]
+
+  isDeleted   Boolean    @default(false)
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId])
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  name      String
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  notes     Note[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, userId])
+  @@index([userId])
+}
+
+model Note {
+  id          String   @id @default(uuid())
+  title       String
+  content     Json?    // TipTap JSON format
+  textContent String?  // Plain text representation for embeddings
+  
+  isArchived  Boolean  @default(false)
+  isFavorite  Boolean  @default(false)
+  isDeleted   Boolean  @default(false)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  folderId    String?
+  folder      Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  tags        Tag[]
+  chunks      DocumentChunk[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([folderId])
+}
+
+enum DocumentType {
+  PDF
+  IMAGE
+  TEXT
+}
+
+model Document {
+  id          String   @id @default(uuid())
+  title       String
+  url         String   // Cloudinary URL
+  publicId    String   // Cloudinary public ID
+  type        DocumentType
+  ocrText     String?  // Extracted text via Google Vision
+  
+  isDeleted   Boolean  @default(false)
+  
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  folderId    String?
+  folder      Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  chunks      DocumentChunk[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([folderId])
+}
+
+model DocumentChunk {
+  id          String   @id @default(uuid())
+  content     String
+  
+  // Vector embedding (pgvector)
+  embedding   Unsupported("vector(1536)")?
+
+  // Polymorphic-like relationships
+  noteId      String?
+  note        Note?     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  
+  documentId  String?
+  document    Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime  @default(now())
+
+  // Note: We'll create HNSW indexes via raw SQL migration
+  @@index([noteId])
+  @@index([documentId])
+}
+
+model ChatSession {
+  id        String   @id @default(uuid())
+  title     String?  
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  messages  ChatMessage[]
+
+  isDeleted Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+enum AIContextRole {
+  USER
+  AI
+}
+
+model ChatMessage {
+  id            String       @id @default(uuid())
+  role          AIContextRole
+  content       String
+  sources       Json?    
+  
+  userId        String
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  chatSessionId String?
+  chatSession   ChatSession? @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime     @default(now())
+
+  @@index([userId])
+  @@index([chatSessionId])
+}
