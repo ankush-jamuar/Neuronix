@@ -6,7 +6,6 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [vector]
 }
 
 enum Tier {
@@ -154,7 +153,7 @@ model DocumentChunk {
   content     String
   
   // Vector embedding (pgvector)
-  embedding   Unsupported("vector(1536)")?
+  embedding String?
 
   // Polymorphic-like relationships
   noteId      String?
