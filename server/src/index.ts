@@ -1,16 +1,13 @@
 import dotenv from "dotenv";
 dotenv.config({ path: "./.env" });
 
-console.log("ENV CHECK:", process.env.CLERK_PUBLISHABLE_KEY);
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
 import { clerkAuth } from './middleware/auth';
 import apiRoutes from './routes/api';
 import webhookRoutes from './routes/webhook';
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 5000;
 
 app.use(cors({
@@ -21,10 +18,10 @@ app.use(cors({
 // Mount webhook route strictly BEFORE express.json()
 app.use('/api/webhooks', webhookRoutes);
 
-app.use(express.json());
-
 // Register Clerk Middleware
 app.use(clerkAuth);
+
+app.use(express.json());
 
 // Healthcheck endpoint
 app.get('/health', (req: Request, res: Response) => {

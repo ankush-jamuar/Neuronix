@@ -1,11 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { Webhook } from 'svix';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import express from 'express';
 
 const router = Router();
-const prisma = new PrismaClient();
-
 router.post('/clerk', express.raw({ type: 'application/json' }), async (req: Request, res: Response): Promise<void> => {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
@@ -58,7 +56,9 @@ router.post('/clerk', express.raw({ type: 'application/json' }), async (req: Req
       const name = `${firstName} ${lastName}`.trim();
       const imageUrl = data.image_url;
 
-      console.log('--- Webhook Extracted Data ---', { clerkId, email, name, imageUrl });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('--- Webhook Extracted Data ---', { clerkId, email, name, imageUrl });
+      }
 
       const result = await prisma.user.upsert({
         where: { clerkId },
@@ -77,7 +77,9 @@ router.post('/clerk', express.raw({ type: 'application/json' }), async (req: Req
         }
       });
 
-      console.log('--- Prisma Upsert Result ---', result);
+      if (process.env.NODE_ENV === 'development') {
+        console.log('--- Prisma Upsert Result ---', result);
+      }
     } else if (eventType === 'user.deleted') {
       const { id } = evt.data;
       
