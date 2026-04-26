@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { ResizableImage } from "@/lib/editor/resizable-image";
 import { useAuth } from "@clerk/nextjs";
 import { useDebouncedCallback } from "use-debounce";
 import { useNoteApi, Note } from "@/lib/api/note.api";
@@ -12,7 +13,8 @@ import { toast } from "sonner";
 import {
   Loader2, Bold, Italic, List, ListOrdered, Quote, Code,
   Heading1, Heading2, Tag as TagIcon, X, ChevronRight,
-  Heading3, Minus, UploadCloud
+  Heading3, Minus, UploadCloud, ChevronLeft, ChevronRight as ChevronRightIcon,
+  ZoomIn, ZoomOut, RotateCw, Maximize2
 } from "lucide-react";
 
 import Link from "next/link";
@@ -20,14 +22,14 @@ import Link from "next/link";
 // ─── Slash Command Definitions ────────────────────────────────────────────────
 
 const SLASH_COMMANDS = [
-  { id: "h1", label: "Heading 1", desc: "Large section heading",    icon: <Heading1 className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleHeading({ level: 1 }).run() },
-  { id: "h2", label: "Heading 2", desc: "Medium section heading",   icon: <Heading2 className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleHeading({ level: 2 }).run() },
-  { id: "h3", label: "Heading 3", desc: "Small section heading",    icon: <Heading3 className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleHeading({ level: 3 }).run() },
-  { id: "code",  label: "Code Block",    desc: "Code with syntax",            icon: <Code  className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleCodeBlock().run() },
-  { id: "quote", label: "Blockquote",    desc: "Capture a quote",             icon: <Quote className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleBlockquote().run() },
-  { id: "list",  label: "Bullet List",   desc: "Simple unordered list",       icon: <List  className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleBulletList().run() },
-  { id: "ol",    label: "Numbered List", desc: "Ordered numbered list",        icon: <ListOrdered className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleOrderedList().run() },
-  { id: "divider", label: "Divider",     desc: "Horizontal rule",             icon: <Minus className="w-4 h-4" />, apply: (e: any) => e.chain().focus().setHorizontalRule().run() },
+  { id: "h1", label: "Heading 1", desc: "Large section heading", icon: <Heading1 className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleHeading({ level: 1 }).run() },
+  { id: "h2", label: "Heading 2", desc: "Medium section heading", icon: <Heading2 className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleHeading({ level: 2 }).run() },
+  { id: "h3", label: "Heading 3", desc: "Small section heading", icon: <Heading3 className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleHeading({ level: 3 }).run() },
+  { id: "code", label: "Code Block", desc: "Code with syntax", icon: <Code className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleCodeBlock().run() },
+  { id: "quote", label: "Blockquote", desc: "Capture a quote", icon: <Quote className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleBlockquote().run() },
+  { id: "list", label: "Bullet List", desc: "Simple unordered list", icon: <List className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleBulletList().run() },
+  { id: "ol", label: "Numbered List", desc: "Ordered numbered list", icon: <ListOrdered className="w-4 h-4" />, apply: (e: any) => e.chain().focus().clearNodes().toggleOrderedList().run() },
+  { id: "divider", label: "Divider", desc: "Horizontal rule", icon: <Minus className="w-4 h-4" />, apply: (e: any) => e.chain().focus().setHorizontalRule().run() },
 ] as const;
 
 // ─── Breadcrumb ───────────────────────────────────────────────────────────────
@@ -103,7 +105,7 @@ const TagRow = ({
       {tags.map(tag => (
         <span
           key={tag}
-          className="flex items-center gap-1 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1 rounded-md text-xs font-medium text-indigo-300 hover:bg-indigo-500/15 transition-colors"
+          className="flex items-center gap-1 bg-white/5 border border-white/10 px-2.5 py-1 rounded-md text-xs font-medium text-slate-300 hover:bg-white/10 transition-colors"
         >
           <span className="opacity-40 select-none">#</span>
           {tag}
@@ -147,11 +149,10 @@ const ToolbarBtn = ({
   <button
     onClick={onClick}
     title={title}
-    className={`p-1.5 rounded-lg transition-colors ${
-      isActive
-        ? "bg-indigo-500/20 text-indigo-300"
-        : "text-slate-500 hover:text-slate-200 hover:bg-white/5"
-    }`}
+    className={`p-2 rounded-md transition-all duration-150 ease-out active:scale-95 ${isActive
+      ? "bg-white/20 text-white shadow-[0_0_10px_rgba(255,255,255,0.08)]"
+      : "text-white/60 hover:text-white hover:bg-white/10 hover:shadow-[0_0_8px_rgba(255,255,255,0.05)]"
+      }`}
   >
     {children}
   </button>
@@ -167,6 +168,11 @@ export default function EditorPage() {
   const [note, setNote] = useState<Note | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [previewFile, setPreviewFile] = useState<{
+    url: string;
+    name: string;
+    type: string;
+  } | null>(null);
 
   const [title, setTitle] = useState("");
   const [tags, setTags] = useState<string[]>([]);
@@ -175,6 +181,15 @@ export default function EditorPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Auto-hide toolbar state
+  const [toolbarVisible, setToolbarVisible] = useState(true);
+  const toolbarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Floating selection toolbar state
+  const [selectionCoords, setSelectionCoords] = useState<{ top: number; left: number } | null>(null);
+
+
 
   // Slash command menu state
   const [slashMenu, setSlashMenu] = useState<{
@@ -186,6 +201,135 @@ export default function EditorPage() {
   }>({ open: false, query: "", top: 0, left: 0, selectedIndex: 0 });
   const slashMenuRef = useRef(slashMenu);
   useEffect(() => { slashMenuRef.current = slashMenu; }, [slashMenu]);
+
+  // ── Auto-hide toolbar: reset on any activity
+  useEffect(() => {
+    const show = () => {
+      setToolbarVisible(true);
+      if (toolbarTimerRef.current) clearTimeout(toolbarTimerRef.current);
+      toolbarTimerRef.current = setTimeout(() => setToolbarVisible(false), 2500);
+    };
+    window.addEventListener("mousemove", show);
+    window.addEventListener("keydown", show);
+    return () => {
+      window.removeEventListener("mousemove", show);
+      window.removeEventListener("keydown", show);
+      if (toolbarTimerRef.current) clearTimeout(toolbarTimerRef.current);
+    };
+  }, []);
+
+  // ── Floating selection mini-toolbar: show on text selection
+  useEffect(() => {
+    const handleMouseUp = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+        setSelectionCoords(null);
+        return;
+      }
+      const rect = sel.getRangeAt(0).getBoundingClientRect();
+      if (rect.width > 0) {
+        setSelectionCoords({ top: rect.top - 52, left: rect.left + rect.width / 2 });
+      } else {
+        setSelectionCoords(null);
+      }
+    };
+    const handleMouseDown = () => setSelectionCoords(null);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => {
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousedown", handleMouseDown);
+    };
+  }, []);
+
+  const editorRef = useRef<any>(null);
+
+  const applySlashCommand = useCallback((cmd: typeof SLASH_COMMANDS[number], editorInstance: any) => {
+    if (!editorInstance) return;
+    const { state } = editorInstance;
+    const { selection } = state;
+    const { $anchor } = selection;
+    // Delete the whole "/query" text from start of paragraph
+    const nodeStart = $anchor.start();
+    editorInstance.chain()
+      .focus()
+      .deleteRange({ from: nodeStart, to: selection.anchor })
+      .run();
+    cmd.apply(editorInstance);
+    setSlashMenu(m => ({ ...m, open: false, query: "" }));
+  }, []);
+
+  // ─── Tiptap ───────────────────────────────────────────────────────────────
+
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+        codeBlock: {},
+        bulletList: {},
+        orderedList: {},
+        blockquote: {},
+        horizontalRule: {},
+      }),
+      Placeholder.configure({
+        placeholder: "Start typing or press '/' for commands",
+        emptyEditorClass: "is-editor-empty",
+      }),
+      ResizableImage,
+    ],
+    content: note?.content || "",
+    editorProps: {
+      attributes: {
+        class: "prose prose-invert prose-slate max-w-none focus:outline-none min-h-[500px] prose-p:leading-relaxed prose-headings:font-bold",
+      },
+      handleKeyDown: (_view, event) => {
+        const sm = slashMenuRef.current;
+        if (!sm.open) return false;
+        if (event.key === "Escape") { setSlashMenu(m => ({ ...m, open: false })); return true; }
+        if (event.key === "ArrowDown") {
+          setSlashMenu(m => ({ ...m, selectedIndex: Math.min(m.selectedIndex + 1, filteredSlashCommands.length - 1) }));
+          return true;
+        }
+        if (event.key === "ArrowUp") {
+          setSlashMenu(m => ({ ...m, selectedIndex: Math.max(m.selectedIndex - 1, 0) }));
+          return true;
+        }
+        if (event.key === "Enter" || event.key === "Tab") {
+          const cmd = filteredSlashCommands[sm.selectedIndex];
+          if (cmd && editorRef.current) { applySlashCommand(cmd, editorRef.current); return true; }
+        }
+        return false;
+      },
+    },
+    onUpdate: ({ editor: editorInstance }) => {
+      const { state, view } = editorInstance;
+      const { selection } = state;
+      const { $anchor } = selection;
+      const nodeText = $anchor.parent.textContent;
+
+      if (nodeText.startsWith("/")) {
+        const query = nodeText.substring(1);
+        const coords = view.coordsAtPos(selection.anchor);
+        setSlashMenu({
+          open: true,
+          query,
+          top: coords.bottom + 6,
+          left: coords.left,
+          selectedIndex: 0,
+        });
+      } else {
+        setSlashMenu(m => m.open ? { ...m, open: false, query: "" } : m);
+      }
+
+      handleAutoSave(title, editorInstance.getJSON(), editorInstance.getText(), tags);
+    },
+    immediatelyRender: false,
+  }, [note]);
+
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
+
 
   // ─── Fetch note ───────────────────────────────────────────────────────────
 
@@ -207,7 +351,7 @@ export default function EditorPage() {
             const key = "neuronix:recent";
             const prev = JSON.parse(localStorage.getItem(key) || "[]") as string[];
             localStorage.setItem(key, JSON.stringify([noteId, ...prev.filter(id => id !== noteId)].slice(0, 8)));
-          } catch {}
+          } catch { }
         }
       } catch {
         toast.error("Failed to load note");
@@ -259,22 +403,24 @@ export default function EditorPage() {
   // ─── Tag handlers ─────────────────────────────────────────────────────────
 
   const handleAddTag = useCallback((tag: string) => {
-    const next = [...tags, tag];
+    if (!editor) return;
+    const next = [...(tags || []), tag];
     setTags(next);
-    handleAutoSave(title, editor?.getJSON(), editor?.getText(), next);
+    handleAutoSave(title, editor.getJSON(), editor.getText(), next);
   }, [tags, title]);
 
   const handleRemoveTag = useCallback((tag: string) => {
-    const next = tags.filter(t => t !== tag);
+    if (!editor) return;
+    const next = (tags || []).filter(t => t !== tag);
     setTags(next);
-    handleAutoSave(title, editor?.getJSON(), editor?.getText(), next);
+    handleAutoSave(title, editor.getJSON(), editor.getText(), next);
   }, [tags, title]);
 
   // ─── File Upload ────────────────────────────────────────────────────────────
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !editor) return;
 
     // Optional: reset input
     e.target.value = '';
@@ -282,8 +428,13 @@ export default function EditorPage() {
     const toastId = toast.loading("Uploading...");
     try {
       const response = await api.uploadFile(file);
-      toast.success(`${file.name} uploaded`, { id: toastId });
-      console.log("Upload Response:", response);
+
+      if (response.type.startsWith("image/")) {
+        editor.chain().focus().setImage({ src: response.url }).run();
+        toast.success(`${file.name} uploaded`, { id: toastId });
+      } else {
+        toast.error("Only image files are supported", { id: toastId });
+      }
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to upload file", { id: toastId });
@@ -296,97 +447,18 @@ export default function EditorPage() {
     !slashMenu.query || c.label.toLowerCase().includes(slashMenu.query.toLowerCase()) || c.id.includes(slashMenu.query.toLowerCase())
   );
 
-  const editorRef = useRef<any>(null);
-
-  const applySlashCommand = useCallback((cmd: typeof SLASH_COMMANDS[number], editorInstance: any) => {
-    if (!editorInstance) return;
-    const { state } = editorInstance;
-    const { selection } = state;
-    const { $anchor } = selection;
-    // Delete the whole "/query" text from start of paragraph
-    const nodeStart = $anchor.start();
-    editorInstance.chain()
-      .focus()
-      .deleteRange({ from: nodeStart, to: selection.anchor })
-      .run();
-    cmd.apply(editorInstance);
-    setSlashMenu(m => ({ ...m, open: false, query: "" }));
-  }, []);
-
-  // ─── Tiptap ───────────────────────────────────────────────────────────────
-
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        heading: { levels: [1, 2, 3] },
-        codeBlock: {},
-        bulletList: {},
-        orderedList: {},
-        blockquote: {},
-        horizontalRule: {},
-      }),
-      Placeholder.configure({
-        placeholder: "Start typing or press '/' for commands",
-        emptyEditorClass: "is-editor-empty",
-      }),
-    ],
-    content: note?.content || "",
-    editorProps: {
-      attributes: {
-        class: "prose prose-invert prose-slate max-w-none focus:outline-none min-h-[500px] prose-p:leading-relaxed prose-headings:font-bold",
-      },
-      handleKeyDown: (_view, event) => {
-        const sm = slashMenuRef.current;
-        if (!sm.open) return false;
-        if (event.key === "Escape") { setSlashMenu(m => ({ ...m, open: false })); return true; }
-        if (event.key === "ArrowDown") {
-          setSlashMenu(m => ({ ...m, selectedIndex: Math.min(m.selectedIndex + 1, filteredSlashCommands.length - 1) }));
-          return true;
-        }
-        if (event.key === "ArrowUp") {
-          setSlashMenu(m => ({ ...m, selectedIndex: Math.max(m.selectedIndex - 1, 0) }));
-          return true;
-        }
-        if (event.key === "Enter" || event.key === "Tab") {
-          const cmd = filteredSlashCommands[sm.selectedIndex];
-          if (cmd && editorRef.current) { applySlashCommand(cmd, editorRef.current); return true; }
-        }
-        return false;
-      },
-    },
-    onUpdate: ({ editor }) => {
-      const { state, view } = editor;
-      const { selection } = state;
-      const { $anchor } = selection;
-      const nodeText = $anchor.parent.textContent;
-
-      if (nodeText.startsWith("/")) {
-        const query = nodeText.substring(1);
-        const coords = view.coordsAtPos(selection.anchor);
-        setSlashMenu({
-          open: true,
-          query,
-          top: coords.bottom + 6,
-          left: coords.left,
-          selectedIndex: 0,
-        });
-      } else {
-        setSlashMenu(m => m.open ? { ...m, open: false, query: "" } : m);
-      }
-
-      handleAutoSave(title, editor.getJSON(), editor.getText(), tags);
-    },
-    immediatelyRender: false,
-  }, [note]);
-
+  // ─── Debug: log editor state on change ────────────────────────────────────
   useEffect(() => {
-    editorRef.current = editor;
+    if (editor) {
+      console.log("EDITOR JSON:", editor.getJSON());
+    }
   }, [editor]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     setTitle(v);
-    handleAutoSave(v, editor?.getJSON(), editor?.getText(), tags);
+    if (!editor) return;
+    handleAutoSave(v, editor.getJSON(), editor.getText(), tags);
   };
 
   // ─── Guards ───────────────────────────────────────────────────────────────
@@ -435,133 +507,241 @@ export default function EditorPage() {
 
   // ─── Editor render ────────────────────────────────────────────────────────
 
+  // ─── Render ───────────────────────────────────────────────────────────────
+
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#0A0A0A]">
+    <>
+      {/* ── Card-Based Editor Layout ── */}
+      <div className="h-full flex items-center justify-center bg-[#0A0A0A] px-4">
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-5 py-2.5 border-b border-white/5 bg-[#0a0a0a]/90 backdrop-blur-md sticky top-0 z-10 gap-2">
-        <div className="flex items-center gap-0.5 flex-wrap">
-          <ToolbarBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} isActive={!!editor?.isActive("heading", { level: 1 })} title="Heading 1">
-            <Heading1 className="w-4 h-4" />
-          </ToolbarBtn>
-          <ToolbarBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} isActive={!!editor?.isActive("heading", { level: 2 })} title="Heading 2">
-            <Heading2 className="w-4 h-4" />
-          </ToolbarBtn>
-          <div className="w-px h-4 bg-white/10 mx-1" />
-          <ToolbarBtn onClick={() => editor?.chain().focus().toggleBold().run()} isActive={!!editor?.isActive("bold")} title="Bold">
-            <Bold className="w-4 h-4" />
-          </ToolbarBtn>
-          <ToolbarBtn onClick={() => editor?.chain().focus().toggleItalic().run()} isActive={!!editor?.isActive("italic")} title="Italic">
-            <Italic className="w-4 h-4" />
-          </ToolbarBtn>
-          <div className="w-px h-4 bg-white/10 mx-1" />
-          <ToolbarBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} isActive={!!editor?.isActive("bulletList")} title="Bullet List">
-            <List className="w-4 h-4" />
-          </ToolbarBtn>
-          <ToolbarBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} isActive={!!editor?.isActive("orderedList")} title="Numbered List">
-            <ListOrdered className="w-4 h-4" />
-          </ToolbarBtn>
-          <div className="w-px h-4 bg-white/10 mx-1" />
-          <ToolbarBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} isActive={!!editor?.isActive("blockquote")} title="Blockquote">
-            <Quote className="w-4 h-4" />
-          </ToolbarBtn>
-          <ToolbarBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} isActive={!!editor?.isActive("codeBlock")} title="Code Block">
-            <Code className="w-4 h-4" />
-          </ToolbarBtn>
-          <div className="w-px h-4 bg-white/10 mx-1" />
-          <ToolbarBtn onClick={() => fileInputRef.current?.click()} isActive={false} title="Upload File">
-            <UploadCloud className="w-4 h-4" />
-          </ToolbarBtn>
-          {/* Hidden File Input */}
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileUpload}
-            accept=".jpg,.jpeg,.png,.pdf" 
-            className="hidden" 
-          />
-        </div>
+        {/* Editor Card */}
+        <div className="
+          relative
+          w-full max-w-6xl
+          h-[85vh]
+          bg-[#111111]
+          border border-white/10
+          rounded-2xl
+          shadow-xl
+          flex flex-col
+          overflow-hidden
+        ">
 
-        {/* Save indicator */}
-        <div className="flex-shrink-0 text-xs">
-          {isSaving ? (
-            <span className="flex items-center gap-1.5 text-slate-500 bg-white/5 px-2.5 py-1 rounded-md">
-              <Loader2 className="w-3 h-3 animate-spin text-indigo-500" /> Saving
-            </span>
-          ) : (
-            <span className="text-slate-600 px-2.5 py-1">Saved</span>
-          )}
-        </div>
-      </div>
-
-      {/* Canvas */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar pb-32">
-        <div className="max-w-3xl mx-auto w-full px-8 md:px-12 pt-12 lg:pt-16">
-
-          {/* Breadcrumb */}
-          <Breadcrumb note={note} />
-
-          {/* Title */}
-          <input
-            autoFocus
-            type="text"
-            className="w-full bg-transparent text-4xl md:text-5xl font-extrabold tracking-tight text-slate-100 placeholder-slate-700 focus:outline-none mb-5 leading-tight"
-            placeholder="Untitled"
-            value={title}
-            onChange={handleTitleChange}
-          />
-
-          {/* Tags */}
-          <TagRow tags={tags} onAdd={handleAddTag} onRemove={handleRemoveTag} />
-
-          {/* Tiptap body */}
-          <div ref={editorContainerRef} className="min-h-[400px] relative">
-            {editor && <EditorContent editor={editor} />}
+          {/* ── Save Indicator (Top Right, outside toolbar) ── */}
+          <div className="absolute top-4 right-6 z-50 flex items-center gap-2">
+            {isSaving ? (
+              <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-medium animate-pulse">
+                <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
+                Saving…
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-slate-600 text-[11px] font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50" />
+                Saved
+              </div>
+            )}
           </div>
 
-          {/* Slash menu hint (shown while no / typed yet) */}
-          {!slashMenu.open && (
-            <div className="text-[10px] text-slate-700 mt-3 select-none">
-              Type <kbd className="border border-white/10 rounded px-1 bg-white/4 text-slate-600">/</kbd> for commands
+          {/* ── Floating Glassmorphism Toolbar (centered pill, auto-hides) ── */}
+          <div
+            className={`absolute top-4 left-1/2 -translate-x-1/2 z-40 transition-opacity duration-300 ${
+              toolbarVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+          >
+          <div className="
+            bg-white/5 backdrop-blur-xl
+            border border-white/10
+            rounded-xl px-3 py-2
+            flex items-center gap-1
+            shadow-lg shadow-black/40
+          ">
+            <ToolbarBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()} isActive={!!editor?.isActive("heading", { level: 1 })} title="Heading 1">
+              <Heading1 className="w-4 h-4" />
+            </ToolbarBtn>
+            <ToolbarBtn onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()} isActive={!!editor?.isActive("heading", { level: 2 })} title="Heading 2">
+              <Heading2 className="w-4 h-4" />
+            </ToolbarBtn>
+
+            <div className="w-px h-4 bg-white/10 mx-1.5" />
+
+            <ToolbarBtn onClick={() => editor?.chain().focus().toggleBold().run()} isActive={!!editor?.isActive("bold")} title="Bold">
+              <Bold className="w-4 h-4" />
+            </ToolbarBtn>
+            <ToolbarBtn onClick={() => editor?.chain().focus().toggleItalic().run()} isActive={!!editor?.isActive("italic")} title="Italic">
+              <Italic className="w-4 h-4" />
+            </ToolbarBtn>
+
+            <div className="w-px h-4 bg-white/10 mx-1.5" />
+
+            <ToolbarBtn onClick={() => editor?.chain().focus().toggleBulletList().run()} isActive={!!editor?.isActive("bulletList")} title="Bullet List">
+              <List className="w-4 h-4" />
+            </ToolbarBtn>
+            <ToolbarBtn onClick={() => editor?.chain().focus().toggleOrderedList().run()} isActive={!!editor?.isActive("orderedList")} title="Numbered List">
+              <ListOrdered className="w-4 h-4" />
+            </ToolbarBtn>
+
+            <div className="w-px h-4 bg-white/10 mx-1.5" />
+
+            <ToolbarBtn onClick={() => editor?.chain().focus().toggleBlockquote().run()} isActive={!!editor?.isActive("blockquote")} title="Blockquote">
+              <Quote className="w-4 h-4" />
+            </ToolbarBtn>
+            <ToolbarBtn onClick={() => editor?.chain().focus().toggleCodeBlock().run()} isActive={!!editor?.isActive("codeBlock")} title="Code Block">
+              <Code className="w-4 h-4" />
+            </ToolbarBtn>
+
+            <div className="w-px h-4 bg-white/10 mx-1.5" />
+
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider bg-white/5 hover:bg-white/10 text-white/60 hover:text-white border border-white/10 rounded-lg transition-all active:scale-95"
+            >
+              <UploadCloud className="w-3.5 h-3.5" />
+              Upload
+            </button>
+          </div>
+          </div>
+
+          {/* ── Title + Tags (Fixed, always visible) ── */}
+          <div className="px-12 pt-16 pb-0 flex-shrink-0">
+            <Breadcrumb note={note} />
+            <input
+              autoFocus
+              type="text"
+              id="note-title-input"
+              className="w-full bg-transparent text-3xl md:text-4xl font-semibold tracking-tight text-white placeholder-slate-800 focus:outline-none leading-tight mt-1"
+              placeholder="Untitled"
+              value={title}
+              onChange={handleTitleChange}
+            />
+            <div className="mt-3">
+              <TagRow tags={tags} onAdd={handleAddTag} onRemove={handleRemoveTag} />
             </div>
-          )}
+          </div>
+          {/* Single divider: below title+tags, above editor body */}
+          <div className="mx-12 mt-5 border-b border-white/10" />
+
+          {/* ── Scrollable Editor Area ONLY ── */}
+          <div className="flex-1 overflow-y-auto editor-scroll px-12 pt-5 pb-10">
+            <div
+              ref={editorContainerRef}
+              className="min-h-[400px] relative"
+              onClick={(e) => {
+                const target = e.target as HTMLElement;
+                const img = target.closest("img");
+                if (img && target.closest(".resizable-image-container")) {
+                  setPreviewFile({
+                    url: img.src,
+                    name: img.alt || "Image Preview",
+                    type: "image/jpeg",
+                  });
+                }
+              }}
+            >
+              {editor && <EditorContent editor={editor} />}
+            </div>
+
+            {/* Slash command hint */}
+            {!slashMenu.open && (
+              <div className="text-[10px] text-slate-800 mt-12 select-none pt-4">
+                Type <kbd className="border border-white/10 rounded px-1 bg-white/4 text-slate-700">/</kbd> for commands
+              </div>
+            )}
+          </div>
+
+          {/* ── Bottom Fade Gradient ── */}
+          <div className="pointer-events-none absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-[#111111] to-transparent rounded-b-2xl z-10" />
+
         </div>
       </div>
+
+      {/* ── Floating Selection Mini-Toolbar ── */}
+      {selectionCoords && (
+        <div
+          className="fixed z-[999] flex items-center gap-0.5 px-2 py-1.5 rounded-xl bg-[#1a1a1f]/95 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/60 animate-in fade-in zoom-in-95 duration-150"
+          style={{
+            top: selectionCoords.top,
+            left: selectionCoords.left,
+            transform: "translateX(-50%)",
+          }}
+          onMouseDown={(e) => e.preventDefault()} // keep selection alive
+        >
+          <button
+            onClick={() => editor?.chain().focus().toggleBold().run()}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all duration-150 active:scale-95 ${editor?.isActive("bold") ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+            title="Bold"
+          >
+            B
+          </button>
+          <button
+            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold italic transition-all duration-150 active:scale-95 ${editor?.isActive("italic") ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+            title="Italic"
+          >
+            I
+          </button>
+          <div className="w-px h-3.5 bg-white/10 mx-0.5" />
+          <button
+            onClick={() => editor?.chain().focus().toggleHeading({ level: 1 }).run()}
+            className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-all duration-150 active:scale-95 ${editor?.isActive("heading", { level: 1 }) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+            title="Heading 1"
+          >
+            H1
+          </button>
+          <button
+            onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+            className={`px-2 py-1 rounded-lg text-[11px] font-semibold transition-all duration-150 active:scale-95 ${editor?.isActive("heading", { level: 2 }) ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+            title="Heading 2"
+          >
+            H2
+          </button>
+          <div className="w-px h-3.5 bg-white/10 mx-0.5" />
+          <button
+            onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-95 ${editor?.isActive("blockquote") ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+            title="Blockquote"
+          >
+            <Quote className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => editor?.chain().focus().toggleCode().run()}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 active:scale-95 ${editor?.isActive("code") ? "bg-white/20 text-white" : "text-white/70 hover:text-white hover:bg-white/10"}`}
+            title="Inline Code"
+          >
+            <Code className="w-3 h-3" />
+          </button>
+        </div>
+      )}
 
       {/* ── Slash Command Menu (fixed viewport coords) ── */}
       {slashMenu.open && filteredSlashCommands.length > 0 && (
         <div
-          className="fixed z-[300] bg-[#1e1e21] border border-white/10 rounded-xl shadow-2xl shadow-black/50 overflow-hidden w-64"
+          className="fixed z-[1000] bg-[#1e1e21] border border-white/10 rounded-xl shadow-2xl shadow-black/50 overflow-hidden w-64"
           style={{ top: slashMenu.top, left: slashMenu.left }}
         >
-          {filteredSlashCommands.length === 0 ? (
-            <p className="text-xs text-slate-600 px-4 py-3">No matching commands</p>
-          ) : (
-            <div className="py-1">
-              <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-700 px-3 pt-2 pb-1">
-                Blocks {slashMenu.query && `· "${slashMenu.query}"`}
-              </p>
-              {filteredSlashCommands.map((cmd, i) => (
-                <button
-                  key={cmd.id}
-                  onMouseDown={e => { e.preventDefault(); applySlashCommand(cmd, editor); }}
-                  className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left ${
-                    slashMenu.selectedIndex === i
-                      ? "bg-indigo-500/15 text-indigo-200"
-                      : "text-slate-400 hover:bg-white/5"
-                  }`}
-                >
-                  <span className={slashMenu.selectedIndex === i ? "text-indigo-400" : "text-slate-600"}>
-                    {cmd.icon}
-                  </span>
-                  <div>
-                    <div className="text-xs font-medium">{cmd.label}</div>
-                    <div className="text-[10px] text-slate-600">{cmd.desc}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="py-1">
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-slate-700 px-3 pt-2 pb-1">
+              Blocks {slashMenu.query && `· "${slashMenu.query}"`}
+            </p>
+            {filteredSlashCommands.map((cmd, i) => (
+              <button
+                key={cmd.id}
+                onMouseDown={(e) => { e.preventDefault(); applySlashCommand(cmd, editor); }}
+                className={`w-full flex items-center gap-3 px-3 py-2 transition-colors text-left ${
+                  slashMenu.selectedIndex === i
+                    ? "bg-indigo-500/15 text-indigo-200"
+                    : "text-slate-400 hover:bg-white/5"
+                }`}
+              >
+                <span className={slashMenu.selectedIndex === i ? "text-indigo-400" : "text-slate-600"}>
+                  {cmd.icon}
+                </span>
+                <div>
+                  <div className="text-xs font-medium">{cmd.label}</div>
+                  <div className="text-[10px] text-slate-600">{cmd.desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
           <div className="px-3 py-1.5 border-t border-white/5 text-[9px] text-slate-700">
             <kbd className="border border-white/10 rounded px-1">↑</kbd>{" "}
             <kbd className="border border-white/10 rounded px-1">↓</kbd> navigate ·{" "}
@@ -570,6 +750,41 @@ export default function EditorPage() {
           </div>
         </div>
       )}
-    </div>
+
+      {/* ── Image Preview Modal ── */}
+      {previewFile && previewFile.type.startsWith("image/") && (
+        <div
+          className="fixed inset-0 z-[5000] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-12 animate-in fade-in duration-300"
+          onClick={() => setPreviewFile(null)}
+        >
+          <button
+            className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors z-[5010]"
+            onClick={() => setPreviewFile(null)}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <div className="relative w-full h-full flex items-center justify-center">
+            <img
+              src={previewFile.url}
+              alt={previewFile.name}
+              className="max-w-full max-h-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center">
+              <p className="text-white/70 text-sm font-medium tracking-wide">{previewFile.name}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Hidden File Input ── */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        accept="image/*"
+        className="hidden"
+      />
+    </>
   );
 }

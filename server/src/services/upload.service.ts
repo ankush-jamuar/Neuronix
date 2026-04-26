@@ -1,6 +1,6 @@
-export const formatUploadResponse = (file: Express.Multer.File) => {
+export const formatUploadResponse = (file: any) => {
   return {
-    url: file.path,
+    url: file.secure_url || file.path, // fallback safe
     type: file.mimetype,
     name: file.originalname,
   };

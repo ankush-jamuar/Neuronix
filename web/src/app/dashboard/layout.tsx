@@ -3,6 +3,7 @@ import { UserButton } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Toaster } from "sonner"; // For premium toast notifications
+import AIChat from "@/components/ai/AIChat";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
@@ -41,10 +42,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 md:ml-64 flex flex-col min-h-screen relative max-w-full">
+      <main className="flex-1 md:ml-64 flex flex-col h-screen overflow-hidden relative max-w-full">
         
         {/* Top Navbar */}
-        <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-white/5 bg-[#0a0a0a]/90 px-6 backdrop-blur-md flex-shrink-0">
+        <header className="sticky top-0 z-50 flex h-16 items-center justify-between border-b border-white/5 bg-[#0a0a0a]/90 px-6 backdrop-blur-md flex-shrink-0">
           <div className="flex items-center gap-4">
             <h1 className="text-lg font-semibold tracking-tight text-slate-200">Dashboard</h1>
           </div>
@@ -70,11 +71,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </header>
 
-        {/* Page Content injected here */}
-        <div className="p-6 lg:p-10 flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-6xl">
+        {/* Page Content injected here — children own their own layout/scroll */}
+        <div className="flex-1 overflow-hidden flex flex-row">
+          <div className="flex-1 overflow-hidden flex flex-col">
             {children}
           </div>
+          <AIChat />
         </div>
       </main>
       

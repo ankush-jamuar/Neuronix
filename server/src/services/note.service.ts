@@ -1,5 +1,6 @@
 import { Note } from '@prisma/client';
 import { prisma } from '../lib/prisma';
+import { processNoteEmbeddings } from './ai/embeddingPipeline';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,18 @@ export class NoteService {
       },
       include: { tags: true }
     });
+
+    // Fire-and-forget: generate embeddings after successful note creation.
+    // New notes start with empty content, so this is a no-op until the user types.
+    // Wrapping in void + IIFE to not await the result.
+    void (async () => {
+      try {
+        await processNoteEmbeddings(note.id, note.textContent ?? '');
+      } catch (err) {
+        console.error('[EmbeddingPipeline] createNote embedding failed (non-fatal):', err);
+      }
+    })();
+
     return { ...note, tags: note.tags.map(t => t.name) };
   }
 
@@ -131,6 +144,17 @@ export class NoteService {
       data: updateData,
       include: { tags: true }
     });
+
+    // Fire-and-forget: re-generate embeddings after a successful note update.
+    // Only triggers when textContent is present (the editor sends it on every save).
+    // Failures here are logged but never thrown — API response is unaffected.
+    void (async () => {
+      try {
+        await processNoteEmbeddings(updated.id, updated.textContent ?? '');
+      } catch (err) {
+        console.error('[EmbeddingPipeline] updateNote embedding failed (non-fatal):', err);
+      }
+    })();
 
     return { ...updated, tags: updated.tags.map(t => t.name) };
   }

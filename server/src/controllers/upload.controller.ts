@@ -8,7 +8,11 @@ export const handleUpload = (req: Request, res: Response): void => {
       return;
     }
 
+    // 🔍 DEBUG: See full Cloudinary response
+    console.log("Uploaded File Object:", req.file);
+
     const response = formatUploadResponse(req.file);
+
     res.status(200).json(response);
   } catch (error) {
     console.error('Upload Error:', error);

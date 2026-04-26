@@ -6,6 +6,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
 enum Tier {
@@ -152,20 +153,22 @@ model Document {
 model DocumentChunk {
   id          String   @id @default(uuid())
   content     String
-  
-  // Vector embedding (pgvector)
-  embedding String?
+
+  // Vector embedding stored as pgvector(384) — compatible with all-MiniLM-L6-v2
+  // Unsupported type: Prisma cannot generate/query this field directly.
+  // All inserts/queries on this column use prisma.$executeRaw / $queryRaw.
+  embedding   Unsupported("vector(384)")?
 
   // Polymorphic-like relationships
   noteId      String?
   note        Note?     @relation(fields: [noteId], references: [id], onDelete: Cascade)
-  
+
   documentId  String?
   document    Document? @relation(fields: [documentId], references: [id], onDelete: Cascade)
 
   createdAt   DateTime  @default(now())
 
-  // Note: We'll create HNSW indexes via raw SQL migration
+  // HNSW cosine index created via raw SQL migration (not Prisma-managed)
   @@index([noteId])
   @@index([documentId])
 }

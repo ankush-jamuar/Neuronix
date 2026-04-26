@@ -6,6 +6,8 @@ import cors from 'cors';
 import { clerkAuth } from './middleware/auth';
 import apiRoutes from './routes/api';
 import webhookRoutes from './routes/webhook';
+import searchRoutes from './routes/search.routes';
+import aiRoutes from './routes/ai.routes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -29,6 +31,8 @@ app.get('/health', (req: Request, res: Response) => {
 });
 
 // Mount API routes
+app.use('/api/ai', aiRoutes);
+app.use('/api/search', searchRoutes);
 app.use('/api', apiRoutes);
 
 // Global Error Handler to guarantee JSON response instead of HTML
