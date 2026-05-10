@@ -34,12 +34,17 @@ export default function AIChat() {
       });
 
       const data = await res.json();
-      console.log("Received:", data);
-      console.log("AI RESPONSE:", data);
+      console.log("FULL AI RESPONSE:", data);
+
+      const aiMessage =
+        data.answer ||
+        data.response ||
+        data.message ||
+        "I don't have enough information in your notes.";
 
       setMessages((prev) => [
         ...prev,
-        { role: "ai", content: data.answer || data.error },
+        { role: "assistant", content: aiMessage },
       ]);
       
       console.log("Messages updated.");

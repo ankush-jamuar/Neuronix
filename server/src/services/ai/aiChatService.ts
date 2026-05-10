@@ -11,99 +11,84 @@ export async function askAI(userId: string, question: string) {
     throw new Error("Question is required");
   }
 
-  const chunks = await prisma.documentChunk.findMany({
-    include: {
-      note: {
-        include: {
-          user: true
-        }
-      }
-    },
-  });
+  const rawChunks: any[] = await prisma.$queryRaw`
+    SELECT 
+      dc.id, 
+      dc.content, 
+      dc.embedding::text as embedding
+    FROM "DocumentChunk" dc
+    JOIN "Note" n ON dc."noteId" = n.id
+    JOIN "User" u ON n."userId" = u.id
+    WHERE n."isDeleted" = false 
+      AND u."clerkId" = ${userId}
+  `;
 
-  console.log("ALL CHUNKS RAW:", chunks);
+  const validChunks = rawChunks
+    .map(chunk => ({
+      content: chunk.content,
+      embedding: chunk.embedding ? JSON.parse(chunk.embedding) : null
+    }))
+    .filter(c => c.embedding !== null);
 
-  const filteredChunks = chunks.filter((chunk: any) => 
-    chunk.note &&
-    chunk.note.user &&
-    chunk.note.user.clerkId === userId &&
-    chunk.note.isDeleted === false
-  );
+  console.log("VALID CHUNKS:", validChunks.length);
 
-  console.log("FILTERED CHUNKS:", filteredChunks);
+  const cleanQuery = question.toLowerCase();
+  const keywords = cleanQuery.split(" ");
 
-  const cleanQuery = question
-    .toLowerCase()
-    .replace(/[^\w\s]/g, "") // remove punctuation
-    .trim();
+  const { generateEmbedding } = await import("./embeddingService");
+  const queryEmbedding = await generateEmbedding(cleanQuery);
 
-  const keywords = cleanQuery.split(/\s+/);
-
-  const matchedChunks = filteredChunks.filter(chunk => {
-    const content = chunk.content
-      .toLowerCase()
-      .replace(/[^\w\s]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    return keywords.some(word =>
-      content.includes(word) ||
-      word.includes(content) ||
-      content.split(" ").some(c => c.startsWith(word))
-    );
-  });
-
-  let finalChunks = matchedChunks;
-
-  if (finalChunks.length === 0) {
-    console.log("⚠️ No strict match, using fallback...");
-
-    finalChunks = filteredChunks.filter(chunk => {
-      const content = chunk.content.toLowerCase();
-      return keywords.some(word =>
-        content.includes(word.slice(0, 3)) // partial match
-      );
-    });
+  function cosineSimilarity(a: number[], b: number[]) {
+    const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
+    const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
+    const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
+    return dot / (magA * magB);
   }
 
-  console.log("KEYWORDS:", keywords);
-  console.log("MATCHED CHUNKS:", finalChunks);
+  const scoredChunks = validChunks.map(chunk => {
+    const content = (chunk.content || "").toLowerCase();
+    let keywordScore = 0;
 
-  const context = finalChunks.map(c => c.content).join("\n\n");
+    keywords.forEach((word: string) => {
+      if (content.includes(word)) {
+        keywordScore++;
+      }
+    });
 
-  console.log("FINAL CONTEXT:", context);
+    const semanticScore = cosineSimilarity(queryEmbedding, chunk.embedding);
 
-  if (!context || context.trim() === "") {
+    return {
+      ...chunk,
+      score: keywordScore * 0.4 + semanticScore * 0.6
+    };
+  });
+
+  const sorted = scoredChunks.sort((a: any, b: any) => b.score - a.score);
+
+  const filtered = sorted.filter((chunk: any) => chunk.score > 0.3);
+
+  if (filtered.length === 0) {
     return "I don't have enough information in your notes.";
   }
 
-  const prompt = `
-You are an AI assistant for a note-taking app.
+  const topChunks = filtered.slice(0, 3);
 
-STRICT RULES:
-- Answer ONLY using the provided context
-- DO NOT add external knowledge
-- DO NOT guess
-- DO NOT explain beyond the text
-- If answer is not found, say:
-  "I don't have enough information in your notes."
+  const MAX_CONTEXT_CHARS = 1000;
+  let context = "";
 
-Context:
-${context}
+  for (const chunk of topChunks) {
+    if ((context + chunk.content).length > MAX_CONTEXT_CHARS) break;
+    context += chunk.content + "\n";
+  }
 
-Question:
-${question}
+  console.log("SORTED:", sorted.map((c: any) => ({
+    content: c.content.slice(0, 50),
+    score: c.score
+  })));
 
-Answer:
-`;
+  console.log("FILTERED:", filtered.length);
+  console.log("TOP CHUNKS:", topChunks.map((c: any) => c.content));
+  console.log("FINAL CONTEXT:", context);
 
-  // 🔹 Call Groq
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.1-8b-instant",
-    messages: [
-      { role: "user", content: prompt },
-    ],
-  });
-
-  return completion.choices[0]?.message?.content || "No response";
+  return context;
 }
