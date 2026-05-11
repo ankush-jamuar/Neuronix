@@ -1,5 +1,7 @@
-import { prisma } from "../../lib/prisma";
+import { analyzeQuery } from "./query-understanding";
+import { performHybridSearch } from "./retrieval";
 import { generateEmbedding } from "./embeddingService";
+import { logger } from "../../utils/logger";
 
 function groupByNote(results: any[]) {
   const map = new Map();
@@ -15,12 +17,17 @@ function groupByNote(results: any[]) {
     map.get(r.noteId).chunks.push({
       content: r.content,
       distance: r.distance,
+      score: r.finalScore // Exposing the hybrid score if needed
     });
   }
 
   return Array.from(map.values());
 }
 
+/**
+ * @deprecated Use askAI or performHybridSearch directly for new features.
+ * Wrapped legacy semanticSearch to use the new Hybrid Retrieval Pipeline.
+ */
 export async function semanticSearch(
   userId: string,
   query: string,
@@ -28,23 +35,27 @@ export async function semanticSearch(
 ) {
   if (!query || query.trim().length === 0) return [];
 
-  const queryEmbedding = await generateEmbedding(query);
+  // 1. Analyze Query
+  const analysis = analyzeQuery(query);
 
-  const results = await prisma.$queryRaw`
-    SELECT 
-      dc.id,
-      dc.content,
-      dc."noteId",
-      dc.embedding <=> ${JSON.stringify(queryEmbedding)}::vector AS distance
-    FROM "DocumentChunk" dc
-    JOIN "Note" n ON dc."noteId" = n.id
-    WHERE n."userId" = ${userId}
-      AND n."isDeleted" = false
-    ORDER BY dc.embedding <=> ${JSON.stringify(queryEmbedding)}::vector
-    LIMIT ${topK}
-  `;
+  // 2. Embed Normalized Query
+  const queryEmbedding = await generateEmbedding(analysis.normalizedQuery);
 
-  console.log("Semantic results:", results);
+  // 3. Perform Hybrid Search
+  const results = await performHybridSearch({
+    userId,
+    originalQuery: query,
+    normalizedQuery: analysis.normalizedQuery,
+    embedding: queryEmbedding,
+    metadata: analysis.metadata,
+    limit: topK * 2 // Over-fetch slightly to allow groupByNote to have enough chunks per note
+  });
 
-  return groupByNote(results as any[]);
+  logger.info("Legacy semanticSearch invoked via Hybrid Pipeline", {
+    userId,
+    query,
+    resultCount: results.length
+  });
+
+  return groupByNote(results);
 }

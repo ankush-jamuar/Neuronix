@@ -1,6 +1,8 @@
 import { prisma } from "../../lib/prisma";
 import Groq from "groq-sdk";
-import { semanticSearch } from "./semanticSearchService";
+import { analyzeQuery } from "./query-understanding";
+import { performHybridSearch, assembleContext } from "./retrieval";
+import { logger } from "../../utils/logger";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
@@ -11,84 +13,48 @@ export async function askAI(userId: string, question: string) {
     throw new Error("Question is required");
   }
 
-  const rawChunks: any[] = await prisma.$queryRaw`
-    SELECT 
-      dc.id, 
-      dc.content, 
-      dc.embedding::text as embedding
-    FROM "DocumentChunk" dc
-    JOIN "Note" n ON dc."noteId" = n.id
-    JOIN "User" u ON n."userId" = u.id
-    WHERE n."isDeleted" = false 
-      AND u."clerkId" = ${userId}
-  `;
+  // 1. Analyze the query to extract intent, metadata, and normalized query
+  const analysis = analyzeQuery(question);
 
-  const validChunks = rawChunks
-    .map(chunk => ({
-      content: chunk.content,
-      embedding: chunk.embedding ? JSON.parse(chunk.embedding) : null
-    }))
-    .filter(c => c.embedding !== null);
-
-  console.log("VALID CHUNKS:", validChunks.length);
-
-  const cleanQuery = question.toLowerCase();
-  const keywords = cleanQuery.split(" ");
-
-  const { generateEmbedding } = await import("./embeddingService");
-  const queryEmbedding = await generateEmbedding(cleanQuery);
-
-  function cosineSimilarity(a: number[], b: number[]) {
-    const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
-    const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-    const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
-    return dot / (magA * magB);
-  }
-
-  const scoredChunks = validChunks.map(chunk => {
-    const content = (chunk.content || "").toLowerCase();
-    let keywordScore = 0;
-
-    keywords.forEach((word: string) => {
-      if (content.includes(word)) {
-        keywordScore++;
-      }
-    });
-
-    const semanticScore = cosineSimilarity(queryEmbedding, chunk.embedding);
-
-    return {
-      ...chunk,
-      score: keywordScore * 0.4 + semanticScore * 0.6
-    };
+  logger.info("Query analysis complete", {
+    originalQuery: analysis.originalQuery,
+    normalizedQuery: analysis.normalizedQuery,
+    intent: analysis.intent,
+    confidence: analysis.confidence
   });
 
-  const sorted = scoredChunks.sort((a: any, b: any) => b.score - a.score);
+  // 2. Generate embedding using the NORMALIZED query
+  const { generateEmbedding } = await import("./embeddingService");
+  const queryEmbedding = await generateEmbedding(analysis.normalizedQuery);
 
-  const filtered = sorted.filter((chunk: any) => chunk.score > 0.3);
+  // 3. Perform production-safe hybrid retrieval
+  const hybridResults = await performHybridSearch({
+    userId,
+    originalQuery: question,
+    normalizedQuery: analysis.normalizedQuery,
+    embedding: queryEmbedding,
+    metadata: analysis.metadata,
+    limit: 10
+  });
 
-  if (filtered.length === 0) {
-    return "I don't have enough information in your notes.";
+  if (hybridResults.length === 0) {
+    return "I don't have enough information in your notes based on your search.";
   }
 
-  const topChunks = filtered.slice(0, 3);
+  // 4. Token-conscious Context Assembly
+  const context = assembleContext(hybridResults, {
+    maxChars: 4000,
+    topK: 5
+  });
 
-  const MAX_CONTEXT_CHARS = 1000;
-  let context = "";
+  logger.info("Context assembly complete", {
+    topChunksRetrieved: hybridResults.length,
+    contextLength: context.length
+  });
 
-  for (const chunk of topChunks) {
-    if ((context + chunk.content).length > MAX_CONTEXT_CHARS) break;
-    context += chunk.content + "\n";
-  }
-
-  console.log("SORTED:", sorted.map((c: any) => ({
-    content: c.content.slice(0, 50),
-    score: c.score
-  })));
-
-  console.log("FILTERED:", filtered.length);
-  console.log("TOP CHUNKS:", topChunks.map((c: any) => c.content));
-  console.log("FINAL CONTEXT:", context);
-
+  // 5. Generate final response (Existing flow preserved)
+  // For this integration phase, we return the context.
+  // The actual LLM calling might be handled by the route or here.
+  // The original function returned the context directly, so we preserve that behavior.
   return context;
 }
