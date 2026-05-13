@@ -8,14 +8,41 @@ import apiRoutes from './routes/api';
 import webhookRoutes from './routes/webhook';
 import searchRoutes from './routes/search.routes';
 import aiRoutes from './routes/ai.routes';
+import analyticsRoutes from './routes/analytics.routes';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+app.use((req, res, next) => {
+  console.log(`[ROUTE LOGGER] ${req.method} ${req.path}`);
+  next();
+});
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+];
+
+if (process.env.FRONTEND_URL && !allowedOrigins.includes(process.env.FRONTEND_URL)) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed"));
+    }
+  },
   credentials: true,
-}));
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+
 
 // Mount webhook route strictly BEFORE express.json()
 app.use('/api/webhooks', webhookRoutes);
@@ -33,6 +60,7 @@ app.get('/health', (req: Request, res: Response) => {
 // Mount API routes
 app.use('/api/ai', aiRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api', apiRoutes);
 
 // Global Error Handler to guarantee JSON response instead of HTML

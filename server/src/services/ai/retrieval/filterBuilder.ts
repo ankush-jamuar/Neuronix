@@ -57,11 +57,15 @@ export function buildMetadataFilters(
   // Topics and noteReferences can also be added here in the future if we have 
   // fields for them (e.g. searching note titles for noteReferences).
   if (metadata.noteReferences && metadata.noteReferences.length > 0) {
-    filters.title = {
-      in: metadata.noteReferences,
-      mode: 'insensitive'
-    };
+    // Instead of strict 'in', use 'OR' with 'contains' for each reference
+    filters.OR = metadata.noteReferences.map(ref => ({
+      title: {
+        contains: ref,
+        mode: 'insensitive' as const
+      }
+    }));
   }
 
+  console.log(`[filterBuilder] Generated filters for user ${userId}:`, JSON.stringify(filters));
   return filters;
 }

@@ -59,10 +59,10 @@ export async function processNoteEmbeddings(
     await prisma.$executeRaw`
       INSERT INTO "DocumentChunk" (id, content, embedding, "noteId", "createdAt")
       VALUES (
-        gen_random_uuid(),
+        gen_random_uuid()::text,
         ${chunk},
         ${JSON.stringify(embedding)}::vector,
-        ${noteId}::uuid,
+        ${noteId},
         NOW()
       )
     `;

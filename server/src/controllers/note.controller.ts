@@ -91,10 +91,6 @@ export class NoteController {
       res.status(200).json(note);
     } catch (error: any) {
       console.error('Error updating note:', error);
-      if (error.message === 'STALE_UPDATE') {
-        res.status(409).json({ error: 'STALE_UPDATE' });
-        return;
-      }
       if (error.message === 'NOT_FOUND') {
         res.status(404).json({ error: 'NOT_FOUND' });
         return;

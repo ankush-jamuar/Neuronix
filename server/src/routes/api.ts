@@ -3,6 +3,7 @@ import { getAuth } from '@clerk/express';
 import noteRoutes from './note.routes';
 import folderRoutes from './folder.routes';
 import uploadRoutes from './upload.routes';
+import debugRoutes from './debug.routes';
 
 const router = Router();
 
@@ -40,5 +41,9 @@ router.get('/debug-auth', (req: Request, res: Response) => {
 router.use('/notes', noteRoutes);
 router.use('/folders', folderRoutes);
 router.use('/upload', uploadRoutes);
+
+if (process.env.NODE_ENV === 'development') {
+  router.use('/debug-retrieval', debugRoutes);
+}
 
 export default router;

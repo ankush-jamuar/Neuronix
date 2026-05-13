@@ -3,7 +3,6 @@ import { UserButton } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Toaster } from "sonner"; // For premium toast notifications
-import AIChat from "@/components/ai/AIChat";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
@@ -36,7 +35,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
             Documents
           </Link>
           <Link href="/dashboard/chat" className="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white transition-colors">
-            Chat Assistant
+            AI Assistant
+          </Link>
+          <Link href="/dashboard/memory-analytics" className="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white transition-colors">
+            Memory Analytics
+          </Link>
+          <Link href="/dashboard/retrieval-debug" className="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-white/5 hover:text-white transition-colors border-t border-white/5 mt-2 pt-2">
+            <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded px-1.5 py-0.5 mr-2 font-semibold">DEV</span>
+            Retrieval Debug
           </Link>
         </nav>
       </aside>
@@ -72,12 +78,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </header>
 
         {/* Page Content injected here — children own their own layout/scroll */}
-        <div className="flex-1 overflow-hidden flex flex-row">
-          <div className="flex-1 overflow-hidden flex flex-col">
-            {children}
-          </div>
-          <AIChat />
-        </div>
+        {children}
       </main>
       
       {/* Global Toast Provider */}

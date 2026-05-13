@@ -167,7 +167,8 @@ export default function EditorPage() {
 
   const [note, setNote] = useState<Note | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  type SaveStatus = 'idle' | 'editing' | 'saving' | 'saved' | 'error';
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [previewFile, setPreviewFile] = useState<{
     url: string;
     name: string;
@@ -321,6 +322,7 @@ export default function EditorPage() {
         setSlashMenu(m => m.open ? { ...m, open: false, query: "" } : m);
       }
 
+      setSaveStatus('editing');
       handleAutoSave(title, editorInstance.getJSON(), editorInstance.getText(), tags);
     },
     immediatelyRender: false,
@@ -379,7 +381,7 @@ export default function EditorPage() {
     abortControllerRef.current = new AbortController();
     const signal = abortControllerRef.current.signal;
 
-    setIsSaving(true);
+    setSaveStatus('saving');
     try {
       const updated = await api.updateNote(noteId, {
         title: newTitle,
@@ -390,13 +392,18 @@ export default function EditorPage() {
       });
       if (!signal.aborted) {
         lastUpdatedAtRef.current = updated.updatedAt;
+        setSaveStatus('saved');
+        // Revert to idle after 2s so indicator fades out
+        setTimeout(() => setSaveStatus(s => s === 'saved' ? 'idle' : s), 2000);
       }
     } catch (err: any) {
       // Silently ignore stale updates and aborted requests — UI is source of truth
       if (err.message === "STALE_UPDATE" || err.name === "AbortError") return;
-      toast.error("Auto-save failed. Your work is preserved locally.");
-    } finally {
-      if (!signal.aborted) setIsSaving(false);
+      if (!signal.aborted) {
+        setSaveStatus('error');
+        toast.error("Auto-save failed. Your work is preserved locally.");
+        setTimeout(() => setSaveStatus('idle'), 4000);
+      }
     }
   }, 1000);
 
@@ -512,32 +519,48 @@ export default function EditorPage() {
   return (
     <>
       {/* ── Card-Based Editor Layout ── */}
-      <div className="h-full flex items-center justify-center bg-[#0A0A0A] px-4">
+      <div className="h-full flex flex-col">
 
         {/* Editor Card */}
         <div className="
           relative
-          w-full max-w-6xl
-          h-[85vh]
-          bg-[#111111]
-          border border-white/10
-          rounded-2xl
-          shadow-xl
+          w-full
+          h-full
+          bg-[#0A0A0A]
           flex flex-col
           overflow-hidden
         ">
 
           {/* ── Save Indicator (Top Right, outside toolbar) ── */}
           <div className="absolute top-4 right-6 z-50 flex items-center gap-2">
-            {isSaving ? (
+            {saveStatus === 'saving' && (
               <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-medium animate-pulse">
                 <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
                 Saving…
               </div>
-            ) : (
-              <div className="flex items-center gap-1.5 text-slate-600 text-[11px] font-medium">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50" />
+            )}
+            {saveStatus === 'saved' && (
+              <div className="flex items-center gap-1.5 text-emerald-500 text-[11px] font-medium animate-in fade-in duration-300">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 Saved
+              </div>
+            )}
+            {saveStatus === 'editing' && (
+              <div className="flex items-center gap-1.5 text-amber-500/70 text-[11px] font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500/70" />
+                Unsaved changes
+              </div>
+            )}
+            {saveStatus === 'error' && (
+              <div className="flex items-center gap-1.5 text-red-400 text-[11px] font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                Save failed
+              </div>
+            )}
+            {saveStatus === 'idle' && (
+              <div className="flex items-center gap-1.5 text-slate-700 text-[11px] font-medium">
+                <div className="w-1.5 h-1.5 rounded-full bg-slate-700" />
+                Auto-save on
               </div>
             )}
           </div>
@@ -602,7 +625,7 @@ export default function EditorPage() {
           </div>
 
           {/* ── Title + Tags (Fixed, always visible) ── */}
-          <div className="px-12 pt-16 pb-0 flex-shrink-0">
+          <div className="px-16 pt-16 pb-0 flex-shrink-0 max-w-7xl mx-auto w-full">
             <Breadcrumb note={note} />
             <input
               autoFocus
@@ -621,7 +644,7 @@ export default function EditorPage() {
           <div className="mx-12 mt-5 border-b border-white/10" />
 
           {/* ── Scrollable Editor Area ONLY ── */}
-          <div className="flex-1 overflow-y-auto editor-scroll px-12 pt-5 pb-10">
+          <div className="flex-1 overflow-y-auto editor-scroll px-16 pt-5 pb-10 max-w-7xl mx-auto w-full">
             <div
               ref={editorContainerRef}
               className="min-h-[400px] relative"

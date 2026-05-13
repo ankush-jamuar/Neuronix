@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "name": "Neuronix Retrieval Benchmark",
+  "scenarios": [
+    {
+      "id": "pgvector-core",
+      "query": "How does pgvector similarity search work?",
+      "expectedTopics": ["pgvector", "cosine distance", "hnsw"],
+      "minimumRelevance": 0.8
+    },
+    {
+      "id": "fermentation",
+      "query": "What factors affect fermentation?",
+      "expectedTopics": ["yeast", "temperature", "sugar", "ph"],
+      "minimumRelevance": 0.75
+    },
+    {
+      "id": "reinforcement",
+      "query": "How is reinforcement learning applied in retrieval?",
+      "expectedTopics": ["reinforcement score", "adaptive ranking", "feedback"],
+      "minimumRelevance": 0.8
+    }
+  ]
+}

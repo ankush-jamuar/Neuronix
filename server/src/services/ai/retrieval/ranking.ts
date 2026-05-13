@@ -5,13 +5,15 @@ export interface RankingWeights {
   keyword: number;
   recency: number;
   importance: number;
+  reinforcement: number;
 }
 
 const DEFAULT_WEIGHTS: RankingWeights = {
-  semantic: 0.7,
-  keyword: 0.3,
-  recency: 0.0,    // Ready for future integration
-  importance: 0.0  // Ready for future integration
+  semantic: 0.55,
+  keyword: 0.10,
+  recency: 0.15,
+  importance: 0.10,
+  reinforcement: 0.10
 };
 
 /**
@@ -27,17 +29,19 @@ export function scoreAndRankChunks(
     // Cosine similarity is 1 - distance.
     const similarity = Math.max(0, 1 - chunk.distance);
     
-    // Simple keyword score normalization (cap at 1.0)
+    // Keyword score normalization (cap at 1.0)
     const normalizedKeywordScore = Math.min(chunk.keywordScore * 0.15, 1.0);
 
-    const recencyScore = chunk.signals?.recency || 0;
+    const recencyBoost = chunk.signals?.recency || 0;
     const importanceScore = chunk.signals?.importance || 0;
+    const reinforcementScore = chunk.signals?.reinforcement || 0;
 
     const finalScore = 
       (similarity * weights.semantic) +
       (normalizedKeywordScore * weights.keyword) +
-      (recencyScore * weights.recency) +
-      (importanceScore * weights.importance);
+      (recencyBoost * weights.recency) +
+      (importanceScore * weights.importance) +
+      (reinforcementScore * weights.reinforcement);
 
     return {
       ...chunk,

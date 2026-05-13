@@ -1,6 +1,7 @@
 import { Note } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { processNoteEmbeddings } from './ai/embeddingPipeline';
+import { trackNoteAccess } from './ai/retrieval/memoryAnalytics';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -45,6 +46,10 @@ export class NoteService {
     if (!note || note.userId !== userId || note.isDeleted) {
       return null;
     }
+
+    // Fire-and-forget: track access for memory intelligence
+    void trackNoteAccess(note.id);
+
     return { ...note, tags: note.tags.map(t => t.name) };
   }
 
@@ -81,7 +86,7 @@ export class NoteService {
       title?: string;
       content?: any;
       textContent?: string;
-      lastUpdatedAt?: string;
+      lastUpdatedAt?: string; // accepted but intentionally ignored — latest write wins
       isFavorite?: boolean;
       folderId?: string | null;
       tags?: string[];
@@ -95,13 +100,14 @@ export class NoteService {
       throw new Error('NOT_FOUND');
     }
 
-    // Optimistic concurrency check
-    if (data.lastUpdatedAt) {
-      const incomingDate = new Date(data.lastUpdatedAt);
-      if (existing.updatedAt > incomingDate) {
-        throw new Error('STALE_UPDATE');
-      }
-    }
+    // ⚠️  Optimistic concurrency check intentionally removed.
+    //
+    // Neuronix is a single-user note editor. Aggressive locking was rejecting
+    // every autosave fired after a rapid TipTap update, a DB reset, or any
+    // scenario where the frontend's lastUpdatedAt drifted from the DB value.
+    //
+    // Strategy: latest local write always wins. Collaborative editing
+    // can be re-introduced later using CRDT/OT architecture when needed.
 
     const updateData: any = {};
     if (data.title !== undefined) updateData.title = data.title;
