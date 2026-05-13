@@ -2,11 +2,17 @@ import { Router } from "express";
 import { prisma } from "../lib/prisma";
 import { calculateDecayFactor } from "../services/ai/retrieval/memoryAnalytics";
 
+import { getAuth } from "@clerk/express";
+
 const router = Router();
 
 router.get("/memory-health", async (req, res) => {
-  const userId = (req as any).auth?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  const auth = getAuth(req);
+  const userId = auth?.userId;
+  
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
   try {
     const dbUser = await prisma.user.findUnique({

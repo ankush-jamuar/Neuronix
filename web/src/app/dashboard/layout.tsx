@@ -3,6 +3,7 @@ import { UserButton } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Toaster } from "sonner"; // For premium toast notifications
+import { CommandPalette } from "@/components/command/CommandPalette";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await currentUser();
@@ -38,11 +39,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             AI Assistant
           </Link>
           <Link href="/dashboard/memory-analytics" className="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-400 hover:bg-white/5 hover:text-white transition-colors">
-            Memory Analytics
-          </Link>
-          <Link href="/dashboard/retrieval-debug" className="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-500 hover:bg-white/5 hover:text-white transition-colors border-t border-white/5 mt-2 pt-2">
-            <span className="text-[10px] bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded px-1.5 py-0.5 mr-2 font-semibold">DEV</span>
-            Retrieval Debug
+            Memory Intelligence
           </Link>
         </nav>
       </aside>
@@ -80,6 +77,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {/* Page Content injected here — children own their own layout/scroll */}
         {children}
       </main>
+      
+      {/* Command Palette Foundation */}
+      <CommandPalette />
       
       {/* Global Toast Provider */}
       <Toaster theme="dark" position="bottom-right" className="!font-sans" />
