@@ -1,5 +1,5 @@
 "use client";
-
+import { useAuth } from "@clerk/nextjs";
 import React, { useEffect, useState } from "react";
 import { 
   BarChart3, Brain, Zap, Clock, Star, Pin, 
@@ -35,25 +35,41 @@ interface AnalyticsData {
 export default function MemoryAnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { getToken } = useAuth();
 
   useEffect(() => {
-    async function fetchAnalytics() {
-      try {
-        const res = await fetch("http://localhost:5005/api/analytics/memory-health", {
-          headers: { "Authorization": `Bearer ${window.Clerk?.session?.getToken()}` }
-        });
-        if (!res.ok) throw new Error("Failed to fetch");
-        const json = await res.json();
-        setData(json);
-      } catch (error) {
-        console.error(error);
-        toast.error("Could not load memory analytics");
-      } finally {
-        setIsLoading(false);
+  async function fetchAnalytics() {
+    try {
+      const token = await getToken();
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/analytics/memory-health`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch analytics");
       }
+
+      const json = await res.json();
+      setData(json);
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not load memory analytics");
+
+    } finally {
+      setIsLoading(false);
     }
-    fetchAnalytics();
-  }, []);
+  }
+
+  fetchAnalytics();
+
+}, [getToken]);
 
   if (isLoading) {
     return (
