@@ -26,9 +26,7 @@
     "prisma": "^6.19.3",
     "sharp": "^0.34.5",
     "svix": "^1.90.0",
-    "zod": "^4.3.6"
-  },
-  "devDependencies": {
+    "zod": "^4.3.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/multer": "^2.1.0",
@@ -36,5 +34,8 @@
     "ts-node-dev": "^2.0.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
+  },
+  "devDependencies": {
+    
   }
 }
