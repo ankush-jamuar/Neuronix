@@ -100,15 +100,17 @@ export class RetrievalDebugger {
     const completeTrace = this.trace as RetrievalTrace;
 
     logger.info("RetrievalTrace Generated", {
-      intent: completeTrace.detectedIntent,
-      finalChunks: completeTrace.candidateCounts.finalChunks,
-      totalLatency: completeTrace.latencyMetrics.totalMs,
-      anomaliesCount: completeTrace.anomalies.length
-    });
+  intent: completeTrace.detectedIntent,
+  finalChunks: completeTrace.candidateCounts.finalChunks,
+  totalLatency: completeTrace.latencyMetrics.totalMs,
+  anomaliesCount: completeTrace.anomalies?.length ?? 0
+});
 
-    if (completeTrace.anomalies.length > 0) {
-      logger.warn("Retrieval Anomalies Detected", { anomalies: completeTrace.anomalies });
-    }
+if ((completeTrace.anomalies?.length ?? 0) > 0) {
+  logger.warn("Retrieval Anomalies Detected", {
+    anomalies: completeTrace.anomalies ?? []
+  });
+}
 
     return completeTrace;
   }
