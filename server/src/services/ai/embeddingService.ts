@@ -1,5 +1,3 @@
-import { pipeline } from "@xenova/transformers";
-
 let extractor: any = null;
 
 /**
@@ -7,10 +5,12 @@ let extractor: any = null;
  */
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    // Lazy load model (only once)
+    // Lazy load model only once
     if (!extractor) {
       console.log("🔄 Loading embedding model...");
-      
+
+      const { pipeline } = await import("@xenova/transformers");
+
       extractor = await pipeline(
         "feature-extraction",
         "Xenova/all-MiniLM-L6-v2"
@@ -25,7 +25,6 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       normalize: true,
     });
 
-    // Convert to flat array
     return Array.from(output.data);
 
   } catch (error) {

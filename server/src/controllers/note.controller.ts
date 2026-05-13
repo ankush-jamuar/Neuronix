@@ -52,7 +52,7 @@ export class NoteController {
         return;
       }
 
-      const { id } = req.params;
+      const id = req.params.id as string;
       const note = await noteService.getNoteById(id, internalUserId);
       
       if (!note) {
@@ -75,7 +75,7 @@ export class NoteController {
         return;
       }
 
-      const { id } = req.params;
+      const id = req.params.id as string;
       const { title, content, textContent, lastUpdatedAt, isFavorite, folderId, tags } = req.body;
       
       const note = await noteService.updateNote(internalUserId, id, {
@@ -107,7 +107,7 @@ export class NoteController {
         return;
       }
 
-      const { id } = req.params;
+      const id = req.params.id as string;
       const success = await noteService.deleteNote(id, internalUserId);
 
       if (!success) {

@@ -43,7 +43,7 @@ export class FolderController {
       const internalUserId = await getInternalUserId(req);
       if (!internalUserId) { res.status(401).json({ error: 'UNAUTHORIZED' }); return; }
 
-      const { id } = req.params;
+      const id = req.params.id as string;
       const { name } = req.body;
 
       if (!name || typeof name !== 'string' || !name.trim()) {
@@ -66,7 +66,7 @@ export class FolderController {
       const internalUserId = await getInternalUserId(req);
       if (!internalUserId) { res.status(401).json({ error: 'UNAUTHORIZED' }); return; }
 
-      const { id } = req.params;
+      const id = req.params.id as string;
       const success = await folderService.deleteFolder(id, internalUserId);
 
       if (!success) { res.status(404).json({ error: 'NOT_FOUND' }); return; }
