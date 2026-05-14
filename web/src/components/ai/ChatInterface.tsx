@@ -131,10 +131,10 @@ function ChatMessage({ msg }: { msg: Message }) {
                 <Clock className="w-2.5 h-2.5" />
                 {msg.metadata.latency}ms
               </span>
-              {msg.metadata.chunks && (
-                 <span className="text-[9px] text-slate-700 font-mono uppercase tracking-widest flex items-center gap-1">
+              {(msg.metadata.chunks || msg.metadata.sources) && (
+                 <span className="text-[9px] text-indigo-400/60 font-mono uppercase tracking-widest flex items-center gap-1">
                   <Sparkles className="w-2.5 h-2.5" />
-                  Grounded
+                  Grounded in Memory
                 </span>
               )}
            </div>

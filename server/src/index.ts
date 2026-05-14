@@ -9,6 +9,8 @@ import webhookRoutes from './routes/webhook';
 import searchRoutes from './routes/search.routes';
 import aiRoutes from './routes/ai.routes';
 import analyticsRoutes from './routes/analytics.routes';
+import chatRoutes from './routes/chat.routes';
+import { initEmbeddingModel } from "./services/ai/embeddingService";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -58,12 +60,18 @@ app.get('/health', (req: Request, res: Response) => {
 app.use('/api/ai', aiRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/chat', chatRoutes);
 app.use('/api', apiRoutes);
 
 // Global Error Handler to guarantee JSON response instead of HTML
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error("Unhandled Global Error:", err.stack || err);
   res.status(500).json({ error: 'Internal Server Error' });
+});
+
+// Global initialization
+initEmbeddingModel().catch(err => {
+  console.error("Failed to pre-load embedding model:", err);
 });
 
 app.listen(PORT, () => {

@@ -4,6 +4,8 @@ export type QueryIntent =
   | 'revision_query'
   | 'note_lookup'
   | 'summary_request'
+  | 'greeting'
+  | 'casual'
   | 'unknown';
 
 export interface IntentClassification {

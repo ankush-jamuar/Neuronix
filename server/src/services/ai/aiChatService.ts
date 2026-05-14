@@ -4,129 +4,193 @@ import { analyzeQuery } from "./query-understanding";
 import { performHybridSearch, assembleContext } from "./retrieval";
 import { logger } from "../../utils/logger";
 import { RetrievalDebugger } from "./retrieval/debug/retrievalDebugger";
+import { IntentRouter } from "./IntentRouter";
+import { generateEmbedding } from "./embeddingService";
 
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
 /**
- * Main AI chat entry point.
- *
- * @param clerkId  - The Clerk user ID from the authenticated session
- * @param question - The user's natural language question
+ * Main AI chat entry point with unified persistence and runtime optimization.
  */
-export async function askAI(clerkId: string, question: string) {
+export async function askAI(params: {
+  userId: string;
+  question: string;
+  sessionId?: string;
+  mode?: 'memory' | 'study';
+}) {
+  const { userId, question, sessionId, mode = 'memory' } = params;
+
   if (!question || question.trim().length === 0) {
     throw new Error("Question is required");
   }
 
-  // 1. Resolve internal DB user ID from Clerk ID
-  const dbUser = await prisma.user.findUnique({
-    where: { clerkId },
-    select: { id: true },
-  });
-
-  if (!dbUser) {
-    logger.warn("askAI: No DB user found for clerkId", { clerkId });
-    return "I couldn't find your user profile. Please try refreshing the page.";
-  }
-
-  const internalUserId = dbUser.id;
-
   const dbg = new RetrievalDebugger(question);
-  let stepTime = Date.now();
+  let overallStartTime = Date.now();
+  let stepTime = overallStartTime;
 
-  // 2. Analyze the query to extract intent, metadata, and normalized query
-  const analysis = analyzeQuery(question);
-  dbg.setQueryAnalysis(analysis, Date.now() - stepTime);
+  try {
+    // 1. Query Analysis
+    const analysis = analyzeQuery(question);
+    dbg.setQueryAnalysis(analysis, Date.now() - stepTime);
+    stepTime = Date.now();
 
-  console.log("\n[aiChatService] QUERY RECEIVED:", question);
-  console.log("[aiChatService] INTERNAL USER ID:", internalUserId);
-  console.log("[aiChatService] DETECTED INTENT:", analysis.intent);
-  console.log("[aiChatService] METADATA FILTERS:", JSON.stringify(analysis.metadata));
+    // 2. Intent-Aware Routing
+    const routing = IntentRouter.route(analysis, mode);
+    logger.info("Routing decision made", { strategy: routing.strategy, reason: routing.reason });
 
-  logger.info("Query analysis complete", {
-    originalQuery: analysis.originalQuery,
-    normalizedQuery: analysis.normalizedQuery,
-    intent: analysis.intent,
-    confidence: analysis.confidence,
-  });
+    let context = "";
+    let sources: any = null;
 
-  // 3. Generate embedding using the NORMALIZED query
-  const { generateEmbedding } = await import("./embeddingService");
-  const queryEmbedding = await generateEmbedding(analysis.normalizedQuery);
-  console.log("[aiChatService] QUERY EMBEDDING LENGTH:", queryEmbedding.length);
+    if (routing.strategy === 'RAG') {
+      // 3. Generate embedding
+      const queryEmbedding = await generateEmbedding(analysis.normalizedQuery);
+      dbg.setLatency("embeddingGenerationMs", Date.now() - stepTime);
+      stepTime = Date.now();
 
-  // 4. Perform production-safe hybrid retrieval scoped to the internal user ID
-  const hybridResults = await performHybridSearch({
-    userId: internalUserId,
-    originalQuery: question,
-    normalizedQuery: analysis.normalizedQuery,
-    embedding: queryEmbedding,
-    metadata: analysis.metadata,
-    limit: 10,
-    debugger: dbg,
-  });
+      // 4. Hybrid Search
+      const hybridResults = await performHybridSearch({
+        userId,
+        originalQuery: question,
+        normalizedQuery: analysis.normalizedQuery,
+        embedding: queryEmbedding,
+        metadata: analysis.metadata,
+        limit: 10,
+        debugger: dbg,
+      });
+      // performHybridSearch sets its own latency in debugger
 
-  logger.info("Hybrid search complete", {
-    resultCount: hybridResults.length,
-    internalUserId,
-  });
+      // 5. Context Assembly
+      context = assembleContext(hybridResults, {
+        maxChars: 4000,
+        topK: 5,
+        debugger: dbg,
+      });
+      sources = hybridResults.slice(0, 5).map(r => ({
+        noteId: r.noteId,
+        content: r.content.substring(0, 200),
+        score: r.finalScore
+      }));
+    } else if (routing.strategy === 'STUDY_FALLBACK') {
+        context = "NOTE: You are in Study Mode. Provide general educational guidance. Only reference personal notes if explicitly asked.";
+    }
 
-  console.log("[aiChatService] VECTOR SEARCH RESULTS COUNT:", hybridResults.length);
+    // 6. LLM Generation
+    const systemPrompt = routing.strategy === 'GREETING' 
+      ? "You are Neuronix, a helpful AI assistant. The user is greeting you or making casual conversation. Be brief, friendly, and professional. Mention that you can help them explore their knowledge base if they have specific questions."
+      : `You are Neuronix, an AI assistant for a personal knowledge management system.
+Your job is to answer questions based on the provided context.
+${mode === 'study' ? 'You are currently in STUDY MODE. Prioritize educational clarity and structured explanations.' : 'Ground your answers in the user\'s personal notes when available.'}
 
-  if (hybridResults.length === 0) {
-    console.log("[aiChatService] ⚠ RETRIEVAL RETURNED ZERO RESULTS. TRIGGERING FALLBACK.");
-    dbg.finalizeAndLog();
-    return "I don't have enough information in your notes to answer that. Try adding more notes or asking a different question.";
-  }
-
-  // 5. Token-conscious Context Assembly
-  const context = assembleContext(hybridResults, {
-    maxChars: 4000,
-    topK: 5,
-    debugger: dbg,
-  });
-
-  console.log("[aiChatService] ASSEMBLED CONTEXT LENGTH:", context.length);
-  // console.log("[aiChatService] CONTEXT PREVIEW:", context.substring(0, 500));
-
-  logger.info("Context assembly complete", {
-    topChunksRetrieved: hybridResults.length,
-    contextLength: context.length,
-  });
-
-  // 6. Generate final AI response via Groq
-  const systemPrompt = `You are Neuronix, an AI assistant for a personal knowledge management system.
-Your job is to answer questions based ONLY on the user's own notes provided below.
-If the provided notes don't contain enough information to answer the question, say so honestly.
-Do NOT make up information. Always ground your answer in the provided context.
-
-Here are the relevant excerpts from the user's notes:
-
+Context Excerpts:
 ---
 ${context}
 ---`;
 
-  console.log("[aiChatService] CALLING GROQ with model: llama-3.1-8b-instant");
+    stepTime = Date.now();
+    const completionPromise = groq.chat.completions.create({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: question },
+      ],
+      temperature: mode === 'study' ? 0.5 : 0.3,
+      max_tokens: 1024,
+    });
 
-  const completion = await groq.chat.completions.create({
-    model: "llama-3.1-8b-instant",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: question },
-    ],
-    temperature: 0.3,
-    max_tokens: 1024,
-  });
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error("AI generation timed out")), 25000)
+    );
 
-  console.log("[aiChatService] GROQ RESPONSE RECEIVED");
+    const completion = await Promise.race([completionPromise, timeoutPromise]) as any;
 
-  const response = completion.choices[0]?.message?.content ?? "I was unable to generate a response. Please try again.";
-  console.log("[aiChatService] FINAL AI RESPONSE:", response.substring(0, 100) + "...");
+    const llmInferenceMs = Date.now() - stepTime;
+    dbg.setLatency("llmInferenceMs", llmInferenceMs);
 
-  const finalTrace = dbg.finalizeAndLog();
-  // finalTrace can be persisted or emitted in future phases
+    const finalAnswer = completion.choices[0]?.message?.content ?? "I was unable to generate a response.";
 
-  return response;
+    // 7. Unified Persistence (Transaction-safe)
+    let effectiveSessionId = sessionId;
+    
+    const trace = dbg.finalizeAndLog();
+    const latencyData = trace.latencyMetrics;
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Ensure session exists or create one
+      if (!effectiveSessionId) {
+        const session = await tx.chatSession.create({
+          data: {
+            userId,
+            title: question.slice(0, 50) + (question.length > 50 ? "..." : "")
+          }
+        });
+        effectiveSessionId = session.id;
+      } else {
+        // Update session timestamp
+        await tx.chatSession.update({
+          where: { id: effectiveSessionId },
+          data: { updatedAt: new Date() }
+        });
+      }
+
+      // Persist User Message
+      const userMsg = await tx.chatMessage.create({
+        data: {
+          userId,
+          chatSessionId: effectiveSessionId,
+          role: 'USER',
+          content: question,
+          status: 'COMPLETED'
+        }
+      });
+
+      // Persist Assistant Message
+      const assistantMsg = await tx.chatMessage.create({
+        data: {
+          userId,
+          chatSessionId: effectiveSessionId,
+          role: 'ASSISTANT',
+          content: finalAnswer,
+          sources: {
+            citations: sources,
+            latency: latencyData,
+            routing: routing,
+            traceId: userMsg.id // Link for future debugging
+          },
+          status: 'COMPLETED'
+        }
+      });
+
+      return {
+        sessionId: effectiveSessionId,
+        userMessageId: userMsg.id,
+        assistantMessageId: assistantMsg.id,
+        answer: finalAnswer,
+        sources: sources,
+        latency: latencyData
+      };
+    });
+
+    return result;
+
+  } catch (error: any) {
+    console.error("[aiChatService] Pipeline Failure:", error);
+    logger.error("AI Pipeline crashed", { error: error.message, stack: error.stack });
+    
+    // Attempt to persist error state if we have a session
+    if (sessionId) {
+        await prisma.chatMessage.create({
+            data: {
+                userId,
+                chatSessionId: sessionId,
+                role: 'ASSISTANT',
+                content: "I encountered a synchronization error while processing your request.",
+                status: 'FAILED'
+            }
+        }).catch(e => console.error("Double fault during error persistence:", e));
+    }
+
+    throw error;
+  }
 }

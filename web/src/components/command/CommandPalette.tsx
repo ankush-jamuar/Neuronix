@@ -42,6 +42,7 @@ export function CommandPalette() {
     { id: "home", label: "Go to Dashboard", icon: <Home className="w-4 h-4" />, path: "/dashboard" },
     { id: "notes", label: "Open Notes Vault", icon: <FileText className="w-4 h-4" />, path: "/dashboard/notes" },
     { id: "ai", label: "Ask AI Assistant", icon: <MessageSquare className="w-4 h-4" />, path: "/dashboard/chat" },
+    { id: "ai-new", label: "New AI Conversation", icon: <Plus className="w-4 h-4" />, path: "/dashboard/chat?new=true" },
     { id: "intelligence", label: "Memory Intelligence", icon: <Brain className="w-4 h-4" />, path: "/dashboard/memory-analytics" },
     { id: "documents", label: "Multimodal Workspace", icon: <Zap className="w-4 h-4" />, path: "/dashboard/documents" },
   ];

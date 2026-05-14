@@ -21,6 +21,7 @@ export interface Message {
   metadata?: {
     chunks?: any[];
     latency?: number;
+    sources?: any;
   };
 }
 
@@ -30,9 +31,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<AIMode>("memory");
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
   return (
-    <ChatContext.Provider value={{ mode, setMode, messages, setMessages, isLoading, setIsLoading }}>
+    <ChatContext.Provider value={{ 
+      mode, 
+      setMode, 
+      messages, 
+      setMessages, 
+      isLoading, 
+      setIsLoading 
+    }}>
       {children}
     </ChatContext.Provider>
   );

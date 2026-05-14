@@ -8,11 +8,13 @@ export function classifyIntent(query: string): IntentClassification {
   const lowerQuery = query.toLowerCase();
 
   // Keyword mappings for different intents
-  const intentRules: Record<QueryIntent, string[]> = {
+  const intentRules: Record<string, string[]> = {
     time_based_search: ['yesterday', 'last week', 'last month', 'today', 'last year', 'recent', 'recently', 'this week'],
     revision_query: ['revise', 'revising', 'study', 'learned', 'review', 'test me', 'quiz', 'recap'],
     note_lookup: ['notes about', 'show notes', 'find notes', 'where are my notes', 'my notes on', 'discussion'],
     summary_request: ['summarize', 'summary', 'tldr', 'tl;dr', 'give me an overview', 'brief', 'short version'],
+    greeting: ['hello', 'hi ', 'hey', 'good morning', 'good afternoon', 'good evening', 'yo ', 'sup', 'howdy'],
+    casual: ['how are you', 'what\'s up', 'tell me a joke', 'who are you', 'what can you do', 'nice to meet you'],
     semantic_search: [], // Default fallback
     unknown: []
   };

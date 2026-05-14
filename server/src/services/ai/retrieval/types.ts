@@ -58,10 +58,12 @@ export interface RetrievalTrace {
   
   latencyMetrics: {
     queryAnalysisMs: number;
+    embeddingGenerationMs: number;
     prismaFilteringMs: number;
     vectorSearchMs: number;
     rankingMs: number;
     contextAssemblyMs: number;
+    llmInferenceMs: number;
     totalMs: number;
   };
   

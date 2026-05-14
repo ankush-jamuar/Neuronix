@@ -1,23 +1,30 @@
 import { Request, Response } from "express";
 import { askAI } from "../services/ai/aiChatService";
-import { getAuth } from "@clerk/express";
+import { getInternalUserId } from "../utils/auth";
+import { logUsage } from "../services/usage.service";
 
 export async function askAIController(req: Request, res: Response) {
   try {
-    const { userId } = getAuth(req);
+    const internalUserId = await getInternalUserId(req);
     
-    console.log("UserId from Clerk:", userId);
-
-    if (!userId) {
+    if (!internalUserId) {
       res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
-    const { question } = req.body;
+    const { question, sessionId, mode } = req.body;
 
-    const answer = await askAI(userId, question);
+    const result = await askAI({
+      userId: internalUserId,
+      question,
+      sessionId,
+      mode
+    });
 
-    res.json({ answer });
+    // Async log usage (don't block response)
+    void logUsage(internalUserId, { queries: 1 });
+
+    res.json(result);
   } catch (error: any) {
     console.error("[AI Chat Error] FATAL EXCEPTION:", error);
     res.status(500).json({ 

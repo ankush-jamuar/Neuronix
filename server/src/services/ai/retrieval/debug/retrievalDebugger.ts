@@ -10,10 +10,12 @@ export class RetrievalDebugger {
   private trace: Partial<RetrievalTrace> = {
     latencyMetrics: {
       queryAnalysisMs: 0,
+      embeddingGenerationMs: 0,
       prismaFilteringMs: 0,
       vectorSearchMs: 0,
       rankingMs: 0,
       contextAssemblyMs: 0,
+      llmInferenceMs: 0,
       totalMs: 0
     },
     candidateCounts: {

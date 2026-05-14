@@ -52,6 +52,7 @@ model Usage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@unique([userId, date])
   @@index([userId])
 }
 
@@ -202,22 +203,31 @@ model ChatSession {
 
 enum AIContextRole {
   USER
-  AI
+  ASSISTANT
+  SYSTEM
+}
+
+enum ChatMessageStatus {
+  PENDING
+  STREAMING
+  COMPLETED
+  FAILED
 }
 
 model ChatMessage {
-  id            String       @id @default(uuid())
+  id            String            @id @default(uuid())
   role          AIContextRole
   content       String
   sources       Json?    
+  status        ChatMessageStatus @default(COMPLETED)
   
   userId        String
-  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   chatSessionId String?
-  chatSession   ChatSession? @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+  chatSession   ChatSession?      @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
 
-  createdAt     DateTime     @default(now())
+  createdAt     DateTime          @default(now())
 
   @@index([userId])
   @@index([chatSessionId])
