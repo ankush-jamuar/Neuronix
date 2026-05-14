@@ -37,9 +37,9 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
 
   return (
     <div className="flex flex-col h-full bg-transparent">
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar pt-8 pb-12">
-        <div className="max-w-4xl mx-auto w-full px-6 space-y-10">
+      {/* Messages Viewport */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar-premium px-6 py-12">
+        <div className="max-w-3xl mx-auto w-full space-y-16">
           {messages.length === 0 && (
             <WelcomePlaceholder onSelectSuggestion={(s) => setInput(s)} mode={mode} />
           )}
@@ -49,17 +49,21 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
           ))}
 
           {isLoading && (
-            <LoadingBubble />
+            <ThinkingBubble />
           )}
 
-          <div ref={bottomRef} />
+          <div ref={bottomRef} className="h-4" />
         </div>
       </div>
 
-      {/* Input Area */}
-      <div className="flex-shrink-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent pt-10 pb-8 px-6">
-        <div className="max-w-4xl mx-auto w-full">
-          <div className="relative flex items-end gap-3 bg-[#111] border border-white/10 rounded-[28px] p-2 shadow-2xl focus-within:border-indigo-500/40 focus-within:ring-4 focus-within:ring-indigo-500/5 transition-all">
+      {/* Premium Composer Area */}
+      <div className="flex-shrink-0 px-6 pb-10 pt-4 relative">
+        {/* Composer Backdrop Glow */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a]/80 to-transparent pointer-events-none" />
+        
+        <div className="max-w-3xl mx-auto w-full relative z-10">
+          <div className="group relative flex flex-col bg-[#111]/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/20 transition-all duration-500">
+            
             <textarea
               ref={inputRef}
               value={input}
@@ -67,32 +71,48 @@ export function ChatInterface({ onSendMessage }: ChatInterfaceProps) {
               onKeyDown={handleKeyDown}
               placeholder={mode === "memory" ? "Ask your second brain..." : "Explore a new topic..."}
               rows={1}
-              className="flex-1 bg-transparent border-none rounded-2xl px-4 py-3.5 text-[15px] text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-0 transition-all resize-none min-h-[52px] max-h-[200px]"
+              className="w-full bg-transparent border-none rounded-[32px] px-8 pt-6 pb-16 text-[16px] text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-0 transition-all resize-none min-h-[80px] max-h-[300px] leading-relaxed"
               onInput={(e) => {
                 const t = e.currentTarget;
                 t.style.height = "auto";
-                t.style.height = `${Math.min(t.scrollHeight, 200)}px`;
+                t.style.height = `${Math.min(t.scrollHeight, 300)}px`;
               }}
             />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading}
-              className="flex-shrink-0 h-[44px] w-[44px] bg-indigo-500 hover:bg-indigo-600 disabled:opacity-20 disabled:cursor-not-allowed text-white rounded-[20px] flex items-center justify-center transition-all shadow-lg shadow-indigo-500/20 active:scale-95 mb-1 mr-1"
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
-            </button>
+            
+            <div className="absolute bottom-4 left-6 right-6 flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                  <Sparkles className="w-3 h-3 text-indigo-400" />
+                  Neural Assist
+                </div>
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/5 text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                  <Zap className="w-3 h-3 text-amber-500" />
+                  Turbo
+                </div>
+              </div>
+
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || isLoading}
+                className="h-10 w-10 bg-indigo-500 hover:bg-indigo-600 disabled:bg-white/5 disabled:text-slate-700 text-white rounded-full flex items-center justify-center transition-all duration-300 shadow-xl shadow-indigo-500/10 active:scale-90 group/btn"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Send className="w-4 h-4 transition-transform group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+                )}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center justify-between mt-3 px-4">
-             <p className="text-[10px] text-slate-700 font-bold uppercase tracking-[0.2em] flex items-center gap-2">
-               <Zap className="w-3 h-3" />
-               {mode === "memory" ? "Hybrid RAG Engine" : "Global Knowledge Engine"}
+          
+          <div className="mt-4 flex items-center justify-center gap-8 opacity-40">
+             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.3em] flex items-center gap-2">
+               <span className="w-1 h-1 rounded-full bg-indigo-500" />
+               Standard Encryption
              </p>
-             <p className="text-[10px] text-slate-700 font-bold uppercase tracking-[0.2em]">
-               Neural Streaming Enabled
+             <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.3em] flex items-center gap-2">
+               <span className="w-1 h-1 rounded-full bg-emerald-500" />
+               Real-time Sync
              </p>
           </div>
         </div>
@@ -105,37 +125,64 @@ function ChatMessage({ msg }: { msg: Message }) {
   const isAssistant = msg.role === "assistant";
   
   return (
-    <div className={`flex gap-6 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"} animate-in fade-in slide-in-from-bottom-2 duration-500`}>
-      <div className={`flex-shrink-0 w-9 h-9 rounded-[14px] flex items-center justify-center mt-1 shadow-sm border transition-all ${
-        isAssistant 
-          ? "bg-[#111] border-white/10" 
-          : "bg-indigo-500/10 border-indigo-500/20"
-      }`}>
-        {isAssistant ? (
-          <Bot className={`w-5 h-5 ${msg.error ? "text-red-400" : "text-slate-400"}`} />
-        ) : (
-          <User className="w-5 h-5 text-indigo-400" />
+    <div className={`flex gap-8 group/msg ${msg.role === "user" ? "flex-row-reverse" : "flex-row"} animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out`}>
+      {/* Cinematic Avatar */}
+      <div className="flex-shrink-0 relative">
+        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center relative z-10 transition-all duration-500 border ${
+          isAssistant 
+            ? "bg-[#0f0f0f] border-white/10 group-hover/msg:border-indigo-500/30" 
+            : "bg-indigo-600 border-indigo-500 shadow-lg shadow-indigo-500/20"
+        }`}>
+          {isAssistant ? (
+            <Bot className={`w-5 h-5 ${msg.error ? "text-red-400" : "text-slate-400 group-hover/msg:text-indigo-400"} transition-colors duration-500`} />
+          ) : (
+            <User className="w-5 h-5 text-white" />
+          )}
+        </div>
+        {isAssistant && (
+           <div className="absolute inset-0 bg-indigo-500/20 blur-xl rounded-full opacity-0 group-hover/msg:opacity-40 transition-opacity duration-700" />
         )}
       </div>
       
-      <div className={`max-w-[85%] rounded-[24px] px-6 py-4 text-[15px] leading-relaxed shadow-sm border transition-all ${
-        isAssistant 
-          ? msg.error ? "bg-red-500/5 border-red-500/10 text-red-300" : "bg-white/[0.03] border-white/5 text-slate-300"
-          : "bg-indigo-500/5 border-indigo-500/10 text-slate-100"
-      }`}>
-        <p className="whitespace-pre-wrap">{msg.content}</p>
+      {/* Message Content Bubble */}
+      <div className={`flex-1 max-w-2xl space-y-4`}>
+        <div className={`text-[15px] leading-[1.7] tracking-tight transition-all duration-500 ${
+          isAssistant 
+            ? "text-slate-200" 
+            : "text-white font-medium"
+        }`}>
+          <div className="whitespace-pre-wrap selection:bg-indigo-500/30">{msg.content}</div>
+        </div>
         
-        {isAssistant && msg.metadata?.latency && (
-           <div className="mt-3 pt-3 border-t border-white/5 flex items-center gap-3">
-              <span className="text-[9px] text-slate-700 font-mono uppercase tracking-widest flex items-center gap-1">
-                <Clock className="w-2.5 h-2.5" />
-                {msg.metadata.latency}ms
-              </span>
-              {(msg.metadata.chunks || msg.metadata.sources) && (
-                 <span className="text-[9px] text-indigo-400/60 font-mono uppercase tracking-widest flex items-center gap-1">
-                  <Sparkles className="w-2.5 h-2.5" />
-                  Grounded in Memory
-                </span>
+        {/* Enhanced Metadata & Grounding */}
+        {isAssistant && (
+           <div className="flex flex-wrap items-center gap-4 opacity-0 group-hover/msg:opacity-100 transition-opacity duration-500">
+              {msg.metadata?.latency && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/5">
+                   <Clock className="w-3 h-3 text-slate-500" />
+                   <span className="text-[10px] text-slate-500 font-mono tracking-wider">{msg.metadata.latency}ms</span>
+                </div>
+              )}
+              
+              {(msg.metadata?.chunks || msg.metadata?.sources) && (
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/5 border border-indigo-500/10 group/ground">
+                   <Sparkles className="w-3 h-3 text-indigo-400 animate-pulse" />
+                   <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">Cognitive Grounding</span>
+                </div>
+              )}
+              
+              {msg.metadata?.sources && Array.isArray(msg.metadata.sources) && (
+                <div className="w-full flex gap-3 mt-2 overflow-x-auto pb-2 custom-scrollbar-hide">
+                  {msg.metadata.sources.map((source: any, i: number) => (
+                    <div key={i} className="flex-shrink-0 max-w-[240px] p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all cursor-pointer">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="w-3 h-3 text-slate-600" />
+                        <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Recall Segment {i + 1}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed italic">"{source.content}"</p>
+                    </div>
+                  ))}
+                </div>
               )}
            </div>
         )}
@@ -150,30 +197,37 @@ function WelcomePlaceholder({ onSelectSuggestion, mode }: { onSelectSuggestion: 
     : ["Explain quantum entanglement", "Best practices for Next.js", "History of industrial design", "How to build a SaaS"];
 
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center gap-8">
-      <div className="w-24 h-24 rounded-[32px] bg-white/[0.02] border border-white/5 flex items-center justify-center relative group">
-        <div className="absolute inset-0 bg-indigo-500/10 blur-[40px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-        <Bot className="w-12 h-12 text-indigo-400 relative z-10" />
+    <div className="flex flex-col items-center justify-center py-20 text-center space-y-10 animate-in fade-in zoom-in-95 duration-1000 ease-out">
+      <div className="relative">
+        <div className="absolute inset-0 bg-indigo-500/20 blur-[60px] rounded-full animate-pulse-slow" />
+        <div className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-[#111] to-[#0a0a0a] border border-white/10 flex items-center justify-center relative z-10 shadow-2xl">
+          <Bot className="w-10 h-10 text-indigo-400" />
+        </div>
       </div>
-      <div className="space-y-3">
-        <h3 className="text-2xl font-bold text-white tracking-tight">
-          {mode === "memory" ? "Consult your second brain" : "Explore the collective mind"}
+      
+      <div className="space-y-4 max-w-xl">
+        <h3 className="text-3xl font-bold text-white tracking-tighter sm:text-4xl">
+          {mode === "memory" ? "Accessing Second Brain" : "Neural Gateway Active"}
         </h3>
-        <p className="text-slate-500 text-sm max-w-sm mx-auto leading-relaxed">
+        <p className="text-slate-500 text-base leading-relaxed tracking-tight">
           {mode === "memory" 
-            ? "Neuronix filters through your notes to provide grounded answers based on your unique knowledge."
-            : "Access global insights and educational support beyond your personal knowledge base."
+            ? "Your personal intelligence layer is synchronized. Ask anything about your notes, documents, and research."
+            : "The global knowledge engine is ready. Explore advanced topics with Llama 3.1 intelligence."
           }
         </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 w-full max-w-2xl px-4">
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl pt-6">
         {suggestions.map((s) => (
           <button
             key={s}
             onClick={() => onSelectSuggestion(s)}
-            className="text-left text-xs text-slate-500 bg-[#0f0f11] border border-white/5 rounded-[20px] px-5 py-4 hover:bg-white/[0.04] hover:text-slate-200 hover:border-indigo-500/30 transition-all shadow-sm"
+            className="group text-left p-5 rounded-[24px] bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] hover:border-indigo-500/30 transition-all duration-300 relative overflow-hidden shadow-sm"
           >
-            {s}
+            <div className="absolute right-4 top-4 opacity-0 group-hover:opacity-100 transition-opacity">
+               <Sparkles className="w-4 h-4 text-indigo-500/40" />
+            </div>
+            <span className="text-sm text-slate-400 group-hover:text-slate-200 transition-colors leading-snug font-medium">{s}</span>
           </button>
         ))}
       </div>
@@ -181,18 +235,23 @@ function WelcomePlaceholder({ onSelectSuggestion, mode }: { onSelectSuggestion: 
   );
 }
 
-function LoadingBubble() {
+function ThinkingBubble() {
   return (
-    <div className="flex gap-6 animate-in fade-in duration-500">
-      <div className="flex-shrink-0 w-9 h-9 rounded-[14px] bg-[#111] border border-white/10 flex items-center justify-center mt-1">
-        <Bot className="w-5 h-5 text-slate-400" />
+    <div className="flex gap-8 animate-in fade-in duration-700">
+      <div className="flex-shrink-0 w-10 h-10 rounded-2xl bg-[#0f0f0f] border border-white/10 flex items-center justify-center relative">
+        <div className="absolute inset-0 bg-indigo-500/10 blur-md rounded-full animate-pulse" />
+        <Bot className="w-5 h-5 text-slate-500" />
       </div>
-      <div className="bg-white/[0.03] border border-white/5 rounded-[24px] px-8 py-5 flex items-center justify-center">
-        <div className="flex gap-1.5">
-          <div className="w-1.5 h-1.5 bg-indigo-500/40 rounded-full animate-bounce [animation-delay:-0.3s]" />
-          <div className="w-1.5 h-1.5 bg-indigo-500/40 rounded-full animate-bounce [animation-delay:-0.15s]" />
-          <div className="w-1.5 h-1.5 bg-indigo-500/40 rounded-full animate-bounce" />
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex gap-1">
+            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-bounce" />
+          </div>
+          <span className="text-[10px] text-indigo-500/60 font-black uppercase tracking-[0.3em]">Processing Neural Graph...</span>
         </div>
+        <div className="h-4 w-48 bg-white/5 rounded-full animate-pulse" />
       </div>
     </div>
   );

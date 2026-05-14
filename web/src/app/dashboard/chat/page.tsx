@@ -167,58 +167,81 @@ function ChatPageContent() {
   };
 
   return (
-    <div className="flex h-full bg-[#0a0a0a] relative overflow-hidden">
-      {/* Background depth elements */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/[0.03] blur-[120px] rounded-full pointer-events-none" />
+  return (
+    <div className="flex h-full bg-transparent relative overflow-hidden">
       
-      {/* Chat Sidebar */}
-      {isSidebarOpen && (
-        <ChatSidebar 
-          currentSessionId={currentSessionId}
-          onSelectSession={onSelectSession}
-          onNewChat={onNewChat}
-        />
-      )}
+      {/* AI Memory Sidebar */}
+      <div className={`flex-shrink-0 border-r border-white/5 transition-all duration-500 ease-in-out ${isSidebarOpen ? "w-80" : "w-0"} overflow-hidden`}>
+        <div className="w-80 h-full bg-[#0a0a0a]/40 backdrop-blur-3xl flex flex-col">
+          <ChatSidebar 
+            currentSessionId={currentSessionId}
+            onSelectSession={onSelectSession}
+            onNewChat={onNewChat}
+          />
+        </div>
+      </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 relative">
-        {/* Dynamic Header */}
-        <div className="flex-shrink-0 border-b border-white/5 bg-[#0a0a0a]/60 backdrop-blur-xl sticky top-0 z-20">
-          <div className="max-w-6xl mx-auto w-full px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-4">
+      {/* Main Workspace Area */}
+      <div className="flex-1 flex flex-col min-w-0 relative h-full">
+        
+        {/* Dynamic Workspace Header */}
+        <header className="flex-shrink-0 border-b border-white/5 bg-[#0a0a0a]/20 backdrop-blur-2xl z-20">
+          <div className="w-full px-8 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-6">
               <button 
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 hover:bg-white/5 rounded-xl transition-all text-slate-500 hover:text-white"
+                className={`p-2.5 rounded-xl transition-all duration-300 flex items-center justify-center ${
+                  isSidebarOpen 
+                    ? "bg-white/5 text-slate-400 hover:text-white" 
+                    : "bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20"
+                }`}
               >
                 <Menu className="w-5 h-5" />
               </button>
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-lg shadow-indigo-500/10">
-                <Bot className="w-5 h-5 text-indigo-400" />
-              </div>
-              <div className="hidden sm:block">
-                <h2 className="text-[15px] font-bold text-white tracking-tight">AI Workspace</h2>
-                <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">
-                  {mode === "memory" ? "Personal Knowledge Engine" : "Global Intelligence Layer"}
-                </p>
+              
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-[14px] bg-gradient-to-tr from-indigo-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-indigo-500/20 animate-pulse-subtle">
+                  <Bot className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                    Cognitive Workspace
+                    <span className="text-[10px] bg-white/10 text-slate-400 px-2 py-0.5 rounded-full border border-white/5 font-mono tracking-widest uppercase">
+                      v2.4
+                    </span>
+                  </h2>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-black mt-0.5">
+                    {mode === "memory" ? "Personal Knowledge Engine" : "Global Intelligence Layer"}
+                  </p>
+                </div>
               </div>
             </div>
             
             <div className="flex items-center gap-6">
+              <div className="h-8 w-px bg-white/5 hidden lg:block" />
               <ModeSwitch />
-              <div className="hidden md:flex items-center gap-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-                <Zap className="w-3 h-3 text-amber-500" />
-                Llama 3 @ Groq
+              <div className="hidden xl:flex items-center gap-3 text-[9px] text-slate-500 font-black uppercase tracking-[0.25em] bg-white/[0.03] px-4 py-2 rounded-full border border-white/5">
+                <div className="w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
+                Llama 3.1 @ Groq Cloud
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
-        {/* Chat Interface */}
-        <div className="flex-1 relative">
-           <ChatInterface onSendMessage={handleSendMessage} />
+        {/* Message Viewport Container */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Subtle Ambient Glow */}
+          <div className="absolute inset-0 pointer-events-none">
+             <div className="absolute top-[20%] right-[10%] w-[30%] h-[40%] bg-indigo-500/5 blur-[100px] rounded-full opacity-50" />
+             <div className="absolute bottom-[10%] left-[5%] w-[40%] h-[30%] bg-blue-500/5 blur-[120px] rounded-full opacity-40" />
+          </div>
+          
+          <ChatInterface onSendMessage={handleSendMessage} />
         </div>
       </div>
     </div>
+  );
+}
   );
 }
 

@@ -2,32 +2,35 @@
 
 import React from "react";
 import { useChat, AIMode } from "./ChatProvider";
-import { Brain, BookOpen, Sparkles, ChevronRight } from "lucide-react";
+import { Brain, BookOpen, Sparkles, Zap } from "lucide-react";
 
 export function ModeSwitch() {
   const { mode, setMode } = useChat();
 
-  const modes: { id: AIMode; label: string; icon: React.ReactNode; color: string }[] = [
+  const modes: { id: AIMode; label: string; icon: React.ReactNode; sublabel: string; color: string }[] = [
     { 
       id: "memory", 
       label: "Memory", 
+      sublabel: "Personal RAG",
       icon: <Brain className="w-3.5 h-3.5" />,
-      color: "bg-indigo-500"
+      color: "from-indigo-600 to-indigo-400"
     },
     { 
       id: "study", 
       label: "Study", 
+      sublabel: "Global IQ",
       icon: <BookOpen className="w-3.5 h-3.5" />,
-      color: "bg-amber-500"
+      color: "from-amber-600 to-amber-400"
     }
   ];
 
   return (
-    <div className="flex items-center p-1 bg-white/[0.03] border border-white/5 rounded-2xl relative overflow-hidden group">
-      {/* Animated Background Slider */}
+    <div className="flex items-center p-1.5 bg-[#111] border border-white/5 rounded-[22px] relative overflow-hidden shadow-inner group">
+      {/* Dynamic Background Slider */}
       <div 
-        className={`absolute inset-y-1 transition-all duration-300 ease-out rounded-xl ${mode === "memory" ? "left-1 w-[48%]" : "left-[51%] w-[48%]"}`}
-        style={{ backgroundColor: mode === "memory" ? "rgb(99 102 241)" : "rgb(245 158 11)" }}
+        className={`absolute top-1.5 bottom-1.5 transition-all duration-500 cubic-bezier(0.4, 0, 0.2, 1) rounded-[18px] z-0 ${
+          mode === "memory" ? "left-1.5 w-[46%]" : "left-[51.5%] w-[46%]"
+        } bg-gradient-to-tr ${mode === "memory" ? modes[0].color : modes[1].color} shadow-lg shadow-indigo-500/10`}
       />
 
       {modes.map((m) => (
@@ -35,15 +38,17 @@ export function ModeSwitch() {
           key={m.id}
           onClick={() => setMode(m.id)}
           className={`
-            relative z-10 flex items-center justify-center gap-2 px-4 py-1.5 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-300
-            ${mode === m.id ? "text-white shadow-xl shadow-black/20" : "text-slate-500 hover:text-slate-300"}
+            relative z-10 flex-1 flex flex-col items-center justify-center gap-0.5 px-6 py-2.5 rounded-[18px] transition-all duration-500
+            ${mode === m.id ? "text-white" : "text-slate-500 hover:text-slate-300"}
           `}
         >
-          {m.icon}
-          {m.label}
-          {mode === m.id && (
-             <Sparkles className="w-2.5 h-2.5 text-white/40 animate-pulse" />
-          )}
+          <div className="flex items-center gap-2">
+            {m.icon}
+            <span className="text-[11px] font-black uppercase tracking-[0.15em]">{m.label}</span>
+          </div>
+          <span className={`text-[8px] font-bold uppercase tracking-widest opacity-60 transition-opacity ${mode === m.id ? "opacity-40" : "opacity-0"}`}>
+            {m.sublabel}
+          </span>
         </button>
       ))}
     </div>

@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { 
   MessageSquare, Plus, Search, 
-  MoreVertical, Trash2, Edit2, 
-  Clock, Calendar, MessageCircle
+  Trash2, MessageCircle, Clock,
+  LayoutGrid, History, Sparkles, Brain
 } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import { API_BASE_URL } from "@/lib/api-config";
@@ -77,91 +77,121 @@ export function ChatSidebar({ currentSessionId, onSelectSession, onNewChat }: Ch
   );
 
   return (
-    <div className="w-80 h-full bg-[#0a0a0a] border-r border-white/5 flex flex-col relative z-20">
-      {/* Sidebar Header */}
-      <div className="p-6 space-y-4">
+    <div className="w-full h-full flex flex-col relative z-20">
+      {/* Premium Sidebar Header */}
+      <div className="p-8 space-y-6 flex-shrink-0">
         <button 
           onClick={onNewChat}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-black font-semibold rounded-2xl hover:bg-slate-200 transition-all shadow-xl shadow-white/5 active:scale-95"
+          className="group w-full flex items-center justify-between px-6 py-4 bg-white text-black font-bold rounded-[22px] hover:bg-indigo-50 transition-all duration-300 shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95"
         >
-          <Plus className="w-4 h-4" />
-          New Chat
+          <div className="flex items-center gap-3">
+             <div className="w-8 h-8 rounded-xl bg-black flex items-center justify-center transition-transform group-hover:rotate-90 duration-500">
+                <Plus className="w-4 h-4 text-white" />
+             </div>
+             <span className="text-[13px] tracking-tight">Initialize Neural Chat</span>
+          </div>
+          <Sparkles className="w-4 h-4 text-black/20 group-hover:text-black/60 transition-colors" />
         </button>
 
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-indigo-400 transition-colors" />
           <input 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search sessions..."
-            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500/40 transition-all"
+            placeholder="Search cognitive history..."
+            className="w-full bg-white/[0.03] border border-white/5 rounded-2xl pl-12 pr-4 py-3 text-[12px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-indigo-500/40 focus:bg-white/[0.05] transition-all"
           />
         </div>
       </div>
 
-      {/* Sessions List */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-6 space-y-6">
+      {/* Sessions Navigator */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar-premium px-4 pb-8">
+        <div className="px-4 mb-4 flex items-center justify-between">
+           <div className="flex items-center gap-2">
+              <History className="w-3.5 h-3.5 text-slate-500" />
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.25em]">Memory History</p>
+           </div>
+           <div className="h-px flex-1 bg-white/5 ml-4" />
+        </div>
+
         {isLoading ? (
-          <div className="space-y-3 px-3">
-            {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-12 rounded-xl bg-white/[0.02] border border-white/5 animate-pulse" />
+          <div className="space-y-4 px-4 pt-4">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="h-16 rounded-[20px] bg-white/[0.02] border border-white/5 animate-pulse" />
             ))}
           </div>
         ) : filteredSessions.length > 0 ? (
-          <div className="space-y-1">
-            <div className="px-3 py-2">
-               <p className="text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em]">Recent Conversations</p>
-            </div>
+          <div className="space-y-2">
             {filteredSessions.map((session) => (
               <button
                 key={session.id}
                 onClick={() => onSelectSession(session.id)}
-                className={`w-full flex items-center justify-between p-3 rounded-xl transition-all group relative ${
+                className={`w-full flex items-center justify-between p-4 rounded-[22px] transition-all duration-300 group relative overflow-hidden ${
                   currentSessionId === session.id 
-                    ? "bg-indigo-500/10 border border-indigo-500/20 text-indigo-400" 
-                    : "text-slate-400 hover:bg-white/[0.03] hover:text-slate-200 border border-transparent"
+                    ? "bg-indigo-500/10 border border-indigo-500/20 text-white shadow-lg" 
+                    : "text-slate-400 hover:bg-white/[0.04] hover:text-slate-200 border border-transparent"
                 }`}
               >
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <MessageCircle className={`w-4 h-4 flex-shrink-0 ${currentSessionId === session.id ? "text-indigo-400" : "text-slate-600 group-hover:text-slate-400"}`} />
+                {currentSessionId === session.id && (
+                   <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500 shadow-[0_0_15px_rgba(99,102,241,0.8)]" />
+                )}
+                
+                <div className="flex items-center gap-4 overflow-hidden relative z-10">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-500 ${
+                    currentSessionId === session.id 
+                      ? "bg-indigo-500 text-white" 
+                      : "bg-white/5 text-slate-600 group-hover:bg-white/10 group-hover:text-slate-400"
+                  }`}>
+                    <MessageCircle className="w-5 h-5" />
+                  </div>
                   <div className="text-left overflow-hidden">
-                    <p className="text-sm font-medium truncate">{session.title || "New Chat"}</p>
-                    <p className="text-[10px] text-slate-600 font-mono truncate">
+                    <p className={`text-[13px] font-bold truncate tracking-tight transition-colors ${currentSessionId === session.id ? "text-white" : "text-slate-400 group-hover:text-slate-200"}`}>
+                      {session.title || "New Session"}
+                    </p>
+                    <p className="text-[10px] text-slate-600 font-bold uppercase tracking-widest mt-1">
                       {formatDistanceToNow(new Date(session.updatedAt), { addSuffix: true })}
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 relative z-10">
                    <button 
                     onClick={(e) => handleDelete(session.id, e)}
-                    className="p-1.5 rounded-lg hover:bg-red-500/10 hover:text-red-400 text-slate-700 transition-all"
+                    className="p-2.5 rounded-xl hover:bg-red-500/10 hover:text-red-400 text-slate-700 transition-all"
                    >
-                     <Trash2 className="w-3.5 h-3.5" />
+                     <Trash2 className="w-4 h-4" />
                    </button>
                 </div>
               </button>
             ))}
           </div>
         ) : (
-          <div className="py-12 flex flex-col items-center justify-center gap-3 text-center px-6">
-            <div className="w-12 h-12 rounded-full bg-white/[0.02] border border-white/5 flex items-center justify-center">
-              <MessageSquare className="w-6 h-6 text-slate-800" />
+          <div className="py-20 flex flex-col items-center justify-center gap-4 text-center px-8 animate-in fade-in duration-1000">
+            <div className="w-16 h-16 rounded-[24px] bg-white/[0.02] border border-white/5 flex items-center justify-center relative">
+              <div className="absolute inset-0 bg-indigo-500/5 blur-xl rounded-full" />
+              <Brain className="w-8 h-8 text-slate-800" />
             </div>
-            <p className="text-xs text-slate-600 italic">No conversations found. Start a new one above.</p>
+            <div className="space-y-1">
+               <p className="text-[13px] font-bold text-slate-500">Neural Graph Empty</p>
+               <p className="text-[11px] text-slate-700 leading-relaxed">Initiate a chat session to begin indexing cognitive data.</p>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Sidebar Footer */}
-      <div className="p-4 border-t border-white/5 bg-[#0a0a0a]/80 backdrop-blur-md">
-         <div className="flex items-center gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">
-               <Calendar className="w-4 h-4 text-indigo-400" />
+      {/* Sidebar Navigation Context */}
+      <div className="p-6 mt-auto">
+         <div className="group p-5 rounded-[24px] bg-gradient-to-br from-white/[0.03] to-transparent border border-white/5 hover:border-white/10 transition-all duration-500 cursor-pointer overflow-hidden relative">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
+               <LayoutGrid className="w-10 h-10 text-indigo-500" />
             </div>
-            <div>
-               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Focus</p>
-               <p className="text-xs font-semibold text-white">Knowledge Synthesis</p>
+            <div className="relative z-10">
+               <div className="flex items-center gap-2 mb-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[9px] font-black text-emerald-500 uppercase tracking-[0.2em]">Operational</span>
+               </div>
+               <p className="text-xs font-bold text-slate-300 tracking-tight">Active Intelligence Engine</p>
+               <p className="text-[10px] text-slate-500 mt-1 font-medium">Memory Synapse 1.0.42</p>
             </div>
          </div>
       </div>

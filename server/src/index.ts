@@ -70,9 +70,9 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Global initialization
-initEmbeddingModel().catch(err => {
-  console.error("Failed to pre-load embedding model:", err);
-});
+// initEmbeddingModel().catch(err => {
+//   console.error("Failed to pre-load embedding model:", err);
+// });
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
