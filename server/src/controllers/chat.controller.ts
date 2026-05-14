@@ -52,7 +52,10 @@ export const renameSession = async (req: Request, res: Response) => {
   const userId = await getInternalUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id } = req.params;
+  const id =
+  typeof req.params.id === "string"
+    ? req.params.id
+    : "";
   const { title } = req.body;
 
   try {
@@ -70,7 +73,10 @@ export const deleteSession = async (req: Request, res: Response) => {
   const userId = await getInternalUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id } = req.params;
+  const id =
+  typeof req.params.id === "string"
+    ? req.params.id
+    : "";
 
   try {
     await prisma.chatSession.update({
@@ -87,7 +93,10 @@ export const getSessionMessages = async (req: Request, res: Response) => {
   const userId = await getInternalUserId(req);
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-  const { id } = req.params;
+  const id =
+  typeof req.params.id === "string"
+    ? req.params.id
+    : "";
 
   try {
     const messages = await prisma.chatMessage.findMany({
