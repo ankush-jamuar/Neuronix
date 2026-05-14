@@ -1,3 +1,4 @@
+console.log("🚀 SERVER BOOT STARTED");
 import dotenv from "dotenv";
 dotenv.config({ path: "./.env" });
 
@@ -10,7 +11,6 @@ import searchRoutes from './routes/search.routes';
 import aiRoutes from './routes/ai.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import chatRoutes from './routes/chat.routes';
-import { initEmbeddingModel } from "./services/ai/embeddingService";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -73,7 +73,11 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // initEmbeddingModel().catch(err => {
 //   console.error("Failed to pre-load embedding model:", err);
 // });
-
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+console.log("🚀 ABOUT TO START SERVER");
+try {
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
+  });
+} catch (err) {
+  console.error("❌ SERVER START FAILED:", err);
+}
